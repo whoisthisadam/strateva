@@ -1,0 +1,59 @@
+# Build artifacts
+target/
+build/
+out/
+dist/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+
+# Maven scratch / debug output
+dep-tree.txt
+effective-pom.xml
+dependency-reduced-pom.xml
+
+# Node
+node_modules/
+.pnp
+.pnp.js
+.yarn/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.vite/
+.cache/
+
+# Test output
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+screenshots/*.png
+!screenshots/.gitkeep
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# OS
+desktop.ini
+
+# Docker
+*.pid
