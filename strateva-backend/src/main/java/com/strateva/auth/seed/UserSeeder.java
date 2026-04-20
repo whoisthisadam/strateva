@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -26,15 +27,26 @@ public class UserSeeder {
 
     private static final List<SeedUser> SEED = List.of(
             new SeedUser("pm", "Менеджер проектов", Role.PROJECT_MANAGER),
-            new SeedUser("strat", "Стратег", Role.STRATEGIST),
-            new SeedUser("ba", "Бизнес-аналитик", Role.BUSINESS_ANALYST)
+            new SeedUser("ba", "Бизнес-аналитик", Role.BUSINESS_ANALYST),
+            new SeedUser("emp", "Сотрудник", Role.EMPLOYEE)
     );
 
     @Bean
     public ApplicationRunner seedUsers(UserRepository repository,
                                        PasswordEncoder encoder,
-                                       TransactionTemplate tx) {
+                                       TransactionTemplate tx,
+                                       JdbcTemplate jdbc) {
         return args -> tx.executeWithoutResult(status -> {
+            int purged = jdbc.update(
+                    "DELETE FROM users WHERE role = 'STRATEGIST' OR username = 'strat'");
+            if (purged > 0) {
+                log.info("Purged {} legacy STRATEGIST/'strat' user row(s)", purged);
+            }
+            // Hibernate's ddl-auto: update does not rewrite enum CHECK constraints
+            // when enum values change; refresh it to the current Role vocabulary.
+            jdbc.execute("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check");
+            jdbc.execute("ALTER TABLE users ADD CONSTRAINT users_role_check "
+                    + "CHECK (role IN ('PROJECT_MANAGER', 'BUSINESS_ANALYST', 'EMPLOYEE'))");
             for (SeedUser seed : SEED) {
                 if (!repository.existsByUsername(seed.username())) {
                     repository.save(new User(

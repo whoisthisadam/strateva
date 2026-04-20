@@ -42,8 +42,8 @@ export const strings = {
     loggedInAs: 'Вы вошли как',
     role: {
       PROJECT_MANAGER: 'Менеджер проектов',
-      STRATEGIST: 'Стратег',
       BUSINESS_ANALYST: 'Бизнес-аналитик',
+      EMPLOYEE: 'Сотрудник',
     },
   },
   errors: {

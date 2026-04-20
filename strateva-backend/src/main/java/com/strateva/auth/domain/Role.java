@@ -6,8 +6,8 @@ package com.strateva.auth.domain;
  */
 public enum Role {
     PROJECT_MANAGER,
-    STRATEGIST,
-    BUSINESS_ANALYST;
+    BUSINESS_ANALYST,
+    EMPLOYEE;
 
     public String authority() {
         return "ROLE_" + name();

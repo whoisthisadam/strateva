@@ -2,7 +2,7 @@
 
 **Strateva** — Strategic IT & Business Planning Tool (diploma project, БГУИР).
 
-A role-based planning application for aligning strategic goals, KPIs, backlogs, tasks, and reporting across `PROJECT_MANAGER`, `STRATEGIST`, and `BUSINESS_ANALYST` roles. UI is Russian-only.
+A role-based planning application for aligning strategic goals, KPIs, backlogs, tasks, and reporting across `PROJECT_MANAGER`, `BUSINESS_ANALYST`, and `EMPLOYEE` roles. UI is Russian-only.
 
 ## Repo layout
 
@@ -64,8 +64,8 @@ App: `http://localhost:5173`.
 | Role | Login | Password |
 |---|---|---|
 | `PROJECT_MANAGER` | `pm` | `pmPass1!` |
-| `STRATEGIST` | `strat` | `stratPass1!` |
 | `BUSINESS_ANALYST` | `ba` | `baPass1!` |
+| `EMPLOYEE` | `emp` | `empPass1!` |
 
 ## Tests
 

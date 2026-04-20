@@ -25,6 +25,7 @@
 
 - 2026-04-19 — 0 — plan drafted, awaiting user approval
 - 2026-04-20 — 0/1/2 — scaffolded backend + frontend, shipped Auth slice end-to-end; Playwright 7/7 green; Phase 0 gaps backfilled (root README, `date-fns`, Java 22→25), baseline commit created
+- 2026-04-20 — 2 — role vocabulary corrected: `STRATEGIST` («Стратег») → `EMPLOYEE` («Сотрудник»); seed user `strat` → `emp`; legacy DB rows auto-purged by seeder; locked the three-role vocabulary in Assumption 9
 
 ---
 
@@ -71,6 +72,13 @@
 6. **Russian-only UI.** All user-visible strings live in `src/lib/strings.ts` (typed constants) so Playwright can assert no English leakage.
 7. **Sequential Thinking MCP is unavailable in this environment.** Substitute: every non-trivial decision gets a short "Rationale" block either inline in the plan or in the session log. If the MCP becomes available, switch to it without re-structuring the plan.
 8. **JWT session length: 8 hours, no refresh token.** `JWT_EXPIRATION_MS = 28800000` (8h) is the documented default so a demo or defense session cannot silently expire mid-presentation. There is no refresh-token mechanism in scope — on 401 the frontend clears auth and redirects to `/login`. If a production deployment later wants short-lived access tokens, a refresh-token flow is a Phase 9+ addition, not a rework.
+9. **Locked role vocabulary (LOCKED 2026-04-20).** The system has **exactly three roles** with these canonical names and Russian labels. Do not rename, alias, or add a role without explicit user approval; do not substitute synonyms (e.g. «Стратег» is _not_ a valid label for any role).
+
+   | Enum | Russian label | Seeded login | Seeded password |
+   |---|---|---|---|
+   | `PROJECT_MANAGER` | Менеджер проектов | `pm` | `pmPass1!` |
+   | `BUSINESS_ANALYST` | Бизнес-аналитик | `ba` | `baPass1!` |
+   | `EMPLOYEE` | Сотрудник | `emp` | `empPass1!` |
 
 ## Open questions for the user (non-blocking for Phase 0)
 
@@ -212,8 +220,8 @@ Every feature phase from Phase 2 onward is a **vertical slice** delivered end-to
 
 ### a. Backend API
 
-- [x] 2.a.1 Enum `Role` — values as shipped: `PROJECT_MANAGER`, `BUSINESS_ANALYST`, `STRATEGIST` (deviation from original plan's `EMPLOYEE`; matches the three-role matrix in the brief)
-- [x] 2.a.2 `User` entity: unique `username`, `passwordHash` (BCrypt), `fullName`, `role`, `active`, audit cols (deviation: login is by `username`, not `email`, matching the brief's seeded creds `pm / strat / ba`)
+- [x] 2.a.1 Enum `Role` — `PROJECT_MANAGER`, `BUSINESS_ANALYST`, `EMPLOYEE` (Russian: «Менеджер проектов», «Бизнес-аналитик», «Сотрудник»). **Locked role vocabulary — do not rename or add roles without explicit user approval.** (Shipped initially as `STRATEGIST` by mistake and corrected 2026-04-20; `UserSeeder` purges legacy `STRATEGIST` rows on dev boot.)
+- [x] 2.a.2 `User` entity: unique `username`, `passwordHash` (BCrypt), `fullName`, `role`, `active`, audit cols (deviation: login is by `username`, not `email`, matching the seeded creds `pm / ba / emp`)
 - [x] 2.a.3 `UserRepository.findByUsername` + `existsByUsername`
 - [x] 2.a.4 `UserDetailsServiceImpl`
 - [x] 2.a.5 `JwtUtil` (HS512, env-configured secret, expiration from `strateva.security.jwt.expiration-ms`; default `28800000` / 8h per Assumption 8)
@@ -221,7 +229,7 @@ Every feature phase from Phase 2 onward is a **vertical slice** delivered end-to
 - [x] 2.a.7 `SecurityConfig`: stateless, `/api/v1/auth/login` + `/api/v1/auth/logout` public, `@EnableMethodSecurity`
 - [x] 2.a.8 DTOs `LoginRequest`, `LoginResponse` (`token`, `expiresInMs`, `user: {id, username, fullName, role}`)
 - [x] 2.a.9 `AuthController.login` via `AuthenticationManager`; `GET /me` and `POST /logout` added
-- [x] 2.a.10 Seed `ApplicationRunner` (always-on for now): `pm/pmPass1!`, `strat/stratPass1!`, `ba/baPass1!`
+- [x] 2.a.10 Seed `ApplicationRunner` (always-on for now): `pm/pmPass1!`, `ba/baPass1!`, `emp/empPass1!`
 - [x] 2.a.11 `AuthAuditService` writes `LOGIN_SUCCESS` / `LOGIN_FAILURE` rows directly from the controller/service boundary — verified in `audit_log` post-smoke
 
 ### b. Backend tests

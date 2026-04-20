@@ -1,4 +1,4 @@
-export const ROLES = ['PROJECT_MANAGER', 'STRATEGIST', 'BUSINESS_ANALYST'] as const
+export const ROLES = ['PROJECT_MANAGER', 'BUSINESS_ANALYST', 'EMPLOYEE'] as const
 export type Role = (typeof ROLES)[number]
 
 export interface CurrentUser {
