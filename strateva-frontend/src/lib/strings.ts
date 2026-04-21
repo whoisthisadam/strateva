@@ -61,27 +61,19 @@ export const strings = {
     welcome: 'Добро пожаловать',
     overview: 'Краткий обзор рабочего пространства',
     roleLabel: 'Роль',
-    soon: 'Скоро',
+    statsTotal: 'Всего',
+    openList: 'Перейти к списку',
+    loadingStats: '—',
     cards: {
       goals: {
         title: 'Стратегические цели',
         description: 'Формулируйте и отслеживайте ключевые цели компании',
+        statsActive: 'Активные',
       },
       backlogs: {
         title: 'Бэклоги',
         description: 'Ведите бэклог инициатив и задач',
-      },
-      tasks: {
-        title: 'Задачи',
-        description: 'Планируйте и распределяйте задачи между участниками',
-      },
-      reports: {
-        title: 'Отчёты',
-        description: 'Аналитика и визуализация прогресса',
-      },
-      audit: {
-        title: 'Журнал аудита',
-        description: 'История изменений и действий пользователей',
+        statsPending: 'На согласовании',
       },
     },
   },

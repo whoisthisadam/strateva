@@ -1,59 +1,127 @@
 import type { ComponentType, SVGProps } from 'react'
-import {
-  BarChart3,
-  FileText,
-  History,
-  ListTodo,
-  Shield,
-  Target,
-} from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { ArrowRight, ListTodo, Shield, Target } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { RoleGuard } from '@/components/RoleGuard'
 import { useAuth } from '@/auth/useAuth'
+import { useGoalsList } from '@/features/goals/useGoals'
+import { useBacklogsList } from '@/features/backlogs/useBacklogs'
 import { strings } from '@/lib/strings'
 
 type Icon = ComponentType<SVGProps<SVGSVGElement>>
 
-interface FeatureCard {
-  key: string
+interface SummaryStat {
+  label: string
+  value: string
+}
+
+interface SummaryCardProps {
+  testId: string
   icon: Icon
   title: string
   description: string
+  stats: SummaryStat[]
+  to: string
 }
 
-const FEATURE_CARDS: FeatureCard[] = [
-  {
-    key: 'goals',
-    icon: Target,
-    title: strings.dashboard.cards.goals.title,
-    description: strings.dashboard.cards.goals.description,
-  },
-  {
-    key: 'backlogs',
-    icon: ListTodo,
-    title: strings.dashboard.cards.backlogs.title,
-    description: strings.dashboard.cards.backlogs.description,
-  },
-  {
-    key: 'tasks',
-    icon: FileText,
-    title: strings.dashboard.cards.tasks.title,
-    description: strings.dashboard.cards.tasks.description,
-  },
-  {
-    key: 'reports',
-    icon: BarChart3,
-    title: strings.dashboard.cards.reports.title,
-    description: strings.dashboard.cards.reports.description,
-  },
-  {
-    key: 'audit',
-    icon: History,
-    title: strings.dashboard.cards.audit.title,
-    description: strings.dashboard.cards.audit.description,
-  },
-]
+function SummaryCard({ testId, icon: Icon, title, description, stats, to }: SummaryCardProps) {
+  const navigate = useNavigate()
+  return (
+    <Card data-testid={testId} className="flex flex-col transition-shadow hover:shadow-md">
+      <CardHeader className="flex-row items-start gap-3 space-y-0">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-inset ring-brand-100">
+          <Icon aria-hidden="true" className="h-5 w-5" />
+        </span>
+        <div className="space-y-1">
+          <CardTitle className="text-base">{title}</CardTitle>
+          <p className="text-sm text-slate-600">{description}</p>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col justify-between gap-4">
+        <dl className="grid grid-cols-2 gap-3">
+          {stats.map((s) => (
+            <div
+              key={s.label}
+              className="rounded-xl border border-slate-200/70 bg-slate-50/60 px-3 py-2"
+            >
+              <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                {s.label}
+              </dt>
+              <dd
+                className="mt-1 text-2xl font-semibold tabular-nums text-slate-900"
+                data-testid={`${testId}-${s.label}`}
+              >
+                {s.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => navigate(to)}
+          data-testid={`${testId}-open`}
+          className="self-start"
+        >
+          <span>{strings.dashboard.openList}</span>
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
+function formatCount(value: number | undefined, isLoading: boolean): string {
+  if (isLoading) return strings.dashboard.loadingStats
+  return String(value ?? 0)
+}
+
+function GoalsSummaryCard() {
+  const total = useGoalsList({ size: 1 })
+  const active = useGoalsList({ status: 'ACTIVE', size: 1 })
+  const isLoading = total.isLoading || active.isLoading
+  return (
+    <SummaryCard
+      testId="dashboard-card-goals"
+      icon={Target}
+      title={strings.dashboard.cards.goals.title}
+      description={strings.dashboard.cards.goals.description}
+      stats={[
+        { label: strings.dashboard.statsTotal, value: formatCount(total.data?.totalElements, isLoading) },
+        {
+          label: strings.dashboard.cards.goals.statsActive,
+          value: formatCount(active.data?.totalElements, isLoading),
+        },
+      ]}
+      to="/goals"
+    />
+  )
+}
+
+function BacklogsSummaryCard() {
+  const total = useBacklogsList({ size: 1 })
+  const pending = useBacklogsList({ status: 'SUBMITTED', size: 1 })
+  const isLoading = total.isLoading || pending.isLoading
+  return (
+    <SummaryCard
+      testId="dashboard-card-backlogs"
+      icon={ListTodo}
+      title={strings.dashboard.cards.backlogs.title}
+      description={strings.dashboard.cards.backlogs.description}
+      stats={[
+        { label: strings.dashboard.statsTotal, value: formatCount(total.data?.totalElements, isLoading) },
+        {
+          label: strings.dashboard.cards.backlogs.statsPending,
+          value: formatCount(pending.data?.totalElements, isLoading),
+        },
+      ]}
+      to="/backlogs"
+    />
+  )
+}
 
 export function DashboardPage() {
   const { user } = useAuth()
@@ -95,27 +163,12 @@ export function DashboardPage() {
 
       <section
         aria-label={strings.nav.dashboard}
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2"
       >
-        {FEATURE_CARDS.map(({ key, icon: Icon, title, description }) => (
-          <Card
-            key={key}
-            className="transition-shadow hover:shadow-md"
-          >
-            <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
-              <div className="flex items-center gap-3">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-inset ring-brand-100">
-                  <Icon aria-hidden="true" className="h-5 w-5" />
-                </span>
-                <CardTitle className="text-base">{title}</CardTitle>
-              </div>
-              <Badge variant="neutral">{strings.dashboard.soon}</Badge>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-slate-600">{description}</p>
-            </CardContent>
-          </Card>
-        ))}
+        <GoalsSummaryCard />
+        <RoleGuard allow={['PROJECT_MANAGER', 'BUSINESS_ANALYST']}>
+          <BacklogsSummaryCard />
+        </RoleGuard>
       </section>
     </div>
   )
