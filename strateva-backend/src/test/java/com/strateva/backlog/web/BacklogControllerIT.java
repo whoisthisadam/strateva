@@ -27,7 +27,7 @@ class BacklogControllerIT extends AbstractPostgresIT {
 
     @BeforeEach
     void truncateBacklogsAndGoals() {
-        jdbc.execute("TRUNCATE TABLE backlog_items, backlogs, kpis, strategic_goals CASCADE");
+        jdbc.execute("TRUNCATE TABLE tasks, backlog_items, backlogs, kpis, strategic_goals CASCADE");
     }
 
     private static final String GOAL = """

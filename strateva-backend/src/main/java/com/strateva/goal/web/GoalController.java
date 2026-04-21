@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
+import java.util.Objects;
 import java.util.UUID;
 
 @RestController
@@ -83,9 +84,14 @@ public class GoalController {
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
         if (currentRole() == Role.EMPLOYEE) {
-            return ResponseEntity.ok(service.findForEmployee(pageable));
+            return ResponseEntity.ok(service.findForEmployee(currentActor(), pageable));
         }
         return ResponseEntity.ok(service.findAll(status, priority, search, pageable));
+    }
+
+    private String currentActor() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth == null ? null : auth.getName();
     }
 
     @GetMapping("/{id}")
@@ -102,7 +108,7 @@ public class GoalController {
                     try { return Role.valueOf(name); }
                     catch (IllegalArgumentException ex) { return null; }
                 })
-                .filter(r -> r != null)
+                .filter(Objects::nonNull)
                 .findFirst()
                 .orElse(null);
     }

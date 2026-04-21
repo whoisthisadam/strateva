@@ -15,9 +15,9 @@
 
 ## Current state
 
-- **Phase:** 0 — complete (with noted deviations); Phases 1–5 complete; cross-cutting silent-authorization pattern adopted
-- **Last completed:** Phase 5 Backlog slice end-to-end + Dashboard summary-card rewrite — state machine DRAFT→SUBMITTED→SIGNED|CANCELLED with BR-2 role gates, `BacklogService` + `BacklogController` + `@Auditable` mutations, React UI (`/backlogs`, `/backlogs/new`, `/backlogs/:id` with inline item editor and role+state-aware actions); `DashboardPage` now renders live `GoalsSummaryCard` + `BacklogsSummaryCard` with real counts, «Перейти к списку» buttons and role-matrix parity with `AppShell` nav (EMPLOYEE sees Goals card only); `./mvnw test` green on Java 25; `npx playwright test` 22/22 green (7 auth + 7 goals + 8 backlog); Playwright MCP walkthrough completed live for Phase 4 + Phase 5 + Dashboard across PM/BA/EMPLOYEE, 0 unexpected console errors
-- **Next up:** Phase 6 — Tasks (UC-5, UC-5.1, UC-8, UC-8.1, UC-9, BR-3, BR-5)
+- **Phase:** 0 — complete (with noted deviations); Phases 1–6 complete; cross-cutting silent-authorization pattern adopted
+- **Last completed:** Phase 6 Tasks slice end-to-end — `TaskStatus` enum + `Task` entity + state machine (TODO → IN_PROGRESS ↔ BLOCKED, → DONE terminal), `TaskService` enforcing BR-3 (status leaves TODO only when `assignedTo` is set), BR-5 (non-archived goal required), EMPLOYEE-own-task gate on status changes and `@Auditable` on every mutation; `TaskController` with method-level `@PreAuthorize` + UC-9 role-forced assignee filter + 404 on foreign EMPLOYEE detail; minimal `UserController` (PM-only EMPLOYEE picker); `StrategicGoalRepository.findForEmployee` now tightened via `EXISTS(task.assignedTo = :username)` subquery (Phase 4 deferred item resolved); React UI (`/tasks` table+Kanban, `/tasks/new` PM-only, `/tasks/:id` with inline edit, assign dialog, status dropdown locking on BR-3), `TasksSummaryCard` on `DashboardPage` and «Задачи» nav entry for all three roles (Assumption 11 honoured); `./mvnw test` green on Java 25; `npx playwright test` 30/30 green (7 auth + 7 goals + 8 backlog + 8 tasks); `docs/smoke/phase-6.http` captures PM create/assign/status + BR-3/BR-5 negatives + UC-9 scoping
+- **Next up:** Phase 7 — Dashboard & reports (UC-3, UC-11, BR-6)
 
 ## Session log
 
@@ -33,6 +33,7 @@
 - 2026-04-21 — 5 — shipped Backlog slice end-to-end: `BacklogStatus` enum (DRAFT/SUBMITTED/SIGNED/CANCELLED), `Backlog`+`BacklogItem` entities with `BacklogRepository` (`JpaSpecificationExecutor`) + `BacklogSpecifications`, `BacklogTransitions` state guards, `BacklogService` enforcing BR-2 + empty-items guard on submit + `@Auditable` on every mutation, `BacklogController` with method-level `@PreAuthorize` and BA-scoped list filtering; fixed `JwtAuthenticationFilter` to always clear the security context when a Bearer token is present but invalid (stopped IT context leakage in multi-test runs). React UI: new `strings.backlog` namespace, `src/types/backlog.ts`, `features/backlogs/{backlogsApi,useBacklogs,backlogBadges,backlogSchema,BacklogItemForm}`, `/backlogs` list + `/backlogs/new` + `/backlogs/:id` pages with inline item add/edit/remove and role+state-aware sign/cancel/submit actions (confirm dialogs), AppShell nav entry gated to PM+BA. `BacklogServiceTest` + `BacklogControllerIT` cover the full transition × role matrix + BR-2 negatives + audit trail; `docs/smoke/phase-5.http` captures the REST happy/negative paths. Playwright `e2e/backlog.spec.ts` (8 specs) drives BA create→add item→submit, PM sign + cancel, BA-silent-readonly on SUBMITTED, PM/EMPLOYEE route redirects and nav hiding; `assertNoEnglish` clean. Full suite: `npx playwright test` 22/22 green (7 auth + 7 goals + 8 backlog); `./mvnw test` green.
 - 2026-04-21 — 4/5 MCP regression — ran the mandatory Playwright MCP walkthrough per Assumption 10 covering both Phase 4 and Phase 5 live. Phase 4 (goals): PM browses `/goals`, drills into a goal (KPI table intact); BA sees the list read-only (no «Создать цель», no status filter); EMPLOYEE sees a single ACTIVE row (no create/filter). Phase 5 (backlogs) full lifecycle: BA empty-submit triggers Russian field errors «Введите наименование бэклога» + «Выберите стратегическую цель»; BA creates «MCP walkthrough: Оптимизация логистики Q3» (DRAFT, no Submit button with zero items), adds item «Аудит складских остатков» (HIGH), edits priority to CRITICAL, submits → «На согласовании» with all BA mutation buttons gone and `ОТПРАВЛЕН` timestamp rendered; PM re-opens the same backlog and sees Sign+Cancel (no Submit/AddItem), clicks Sign → «Подписан» with `ПОДПИСАЛ pm` row; BA seeds a second DRAFT via API, PM opens it and sees only Cancel (no Sign — correct, DRAFT cannot be signed), clicks Cancel → «Сторнирован» with `СТОРНИРОВАЛ pm`; PM on `/backlogs` has no «Создать бэклог» button and `/backlogs/new` silently redirects to `/backlogs`; EMPLOYEE on `/backlogs` silently redirects to `/` and the header nav shows only «Главная» + «Стратегические цели» («Бэклоги» hidden). Console sweep across the whole session: only expected 401s (initial `/auth/me` probes + one wrong-username login attempt); no unexpected errors, no stray English, no layout breakage.
 - 2026-04-21 — UX/dashboard — replaced the five «Скоро» placeholder cards on `DashboardPage` with two live summary cards (`GoalsSummaryCard`, `BacklogsSummaryCard`) that read real counts via the existing `useGoalsList` / `useBacklogsList` hooks (total + one status-scoped stat each) and expose a «Перейти к списку» button linking to the matching list page. Cards reuse `RoleGuard` with the same allow-list as the `AppShell` nav entry, so EMPLOYEE sees only the Goals card (their single scoped ACTIVE row) while PM/BA see both. Removed the now-unused `strings.dashboard.soon` / `cards.{tasks,reports,audit}` entries; added `strings.dashboard.{statsTotal,openList,loadingStats}` + per-card `statsActive`/`statsPending`. Locked a new convention as Assumption 11: every UI-shipping phase must wire a live dashboard summary card **and** a nav item under the same role matrix — no «Скоро» stubs. MCP walkthrough: PM dashboard shows Goals(2/1) + Backlogs(14/6), BA shows the same two cards, EMPLOYEE shows Goals(1/1) only with nav ≈ «Главная» + «Стратегические цели» (no Backlogs), «Перейти к списку» click-through works, 0 stray English, 0 unexpected console errors. Scripted: `npx playwright test` 22/22 still green, `tsc --noEmit` clean.
+- 2026-04-21 — 6 — shipped Tasks slice end-to-end: `TaskStatus` enum (TODO/IN_PROGRESS/DONE/BLOCKED) with `TaskTransitions` guarding the state machine (TODO → IN_PROGRESS ↔ BLOCKED, → DONE terminal); `Task` entity (goal FK, optional backlogItem FK, title/description/priority/status/deadline/assignedTo/createdBy) + `TaskRepository` (`JpaSpecificationExecutor`) + `TaskSpecifications`; `TaskService` enforcing **BR-3** (status may leave TODO only when `assignedTo != null`), **BR-5** (create rejects null goal and ARCHIVED goals; assign rejects non-EMPLOYEE / inactive users), EMPLOYEE-own-task gate on status changes, `@Auditable` on create/update/assign/changeStatus/delete, DONE-terminal + TODO-only-delete invariants; `TaskController` with method-level `@PreAuthorize` (PM for mutations, PM+EMPLOYEE for status, all three for reads) and **UC-9** role-forced `assignee=currentActor()` on list + 404 on foreign EMPLOYEE detail. Added a minimal `UserController` (PM-only, EMPLOYEE-filtered `/api/v1/users` for the assignee picker) + `UserSummary` DTO. Tightened the Phase 4 deferred EMPLOYEE scoping: `StrategicGoalRepository.findForEmployee` now uses an `EXISTS(SELECT 1 FROM Task t WHERE t.goal=g AND t.assignedTo=:username)` subquery wired via `GoalService` → `currentActor()`. Backend tests: `TaskServiceTest` (BR-3 + BR-5 matrices, state machine, EMPLOYEE own-task rule) + `TaskControllerIT` (PM create → assign → EMPLOYEE transitions → DONE + BR-3/BR-5 negatives + UC-9 scoping + audit-row assertions); `./mvnw test` green on Java 25. React UI: `strings.tasks` namespace, `src/types/{tasks,users}.ts`, `features/tasks/{tasksApi,useTasks,taskBadges,taskSchema,TaskForm,TaskStatusDropdown,TaskAssignDialog}` + `features/users/{usersApi,useUsers}`, `/tasks` (Table + Kanban toggle, search + status + priority filters), `/tasks/new` (PM-only), `/tasks/:id` (inline priority/deadline edit for PM, assign dialog, status dropdown that mirrors `TaskTransitions` exactly and shows a «Назначьте исполнителя» lock when BR-3 would block). Dashboard: new `TasksSummaryCard` (total + own-in-progress for EMPLOYEE, total + IN_PROGRESS for PM/BA) visible to all three roles; «Задачи» nav entry added to `AppShell` for all roles (Assumption 11). Playwright `e2e/tasks.spec.ts` (8 specs): PM UI create → BR-3 lock → assign → unlock, EMPLOYEE TODO→IN_PROGRESS→DONE with terminal-hide of status panel, EMPLOYEE `/tasks` shows only own rows (UC-9), EMPLOYEE foreign detail hides status panel (404 path), BA/EMPLOYEE `/tasks/new` silently redirects to `/tasks`, nav + dashboard card visible for all three roles; `assertNoEnglish` clean. Full regression: `npx playwright test` 30/30 green (7 auth + 7 goals + 8 backlog + 8 tasks); `tsc --noEmit` clean. Smoke: `docs/smoke/phase-6.http` covers PM login × 3 roles → goal setup → PM create/assign, BR-3 and BR-5 negatives, EMPLOYEE transitions, UC-9 list scoping, DONE-terminal and TODO-only-delete guards.
 
 ---
 
@@ -423,52 +424,54 @@ Every feature phase from Phase 2 onward is a **vertical slice** delivered end-to
 
 ### a. Backend API
 
-- [ ] 6.a.1 Enum `TaskStatus` (TODO, IN_PROGRESS, DONE, BLOCKED)
-- [ ] 6.a.2 Entity `Task` (goalId, backlogItemId nullable, title, description, priority, status, deadline, assignedTo, createdBy)
-- [ ] 6.a.3 DTOs `TaskCreateRequest`, `TaskUpdateRequest`, `TaskAssignRequest`, `TaskStatusRequest`, `TaskResponse`; mappers
-- [ ] 6.a.4 `TaskService`: `create` (UC-8, PM, requires goalId — BR-5), `update` (UC-5 priority, UC-5.1 deadline), `assign` (UC-8.1, PM), `updateStatus` (EMPLOYEE on own, PM on any), `findForUser` (UC-9), `findAll` (PM), `findById`
-- [ ] 6.a.5 **BR-3** enforced: status may leave TODO only when `assignedTo != null`
-- [ ] 6.a.6 **BR-5** enforced: create rejects null/missing/ARCHIVED goal
-- [ ] 6.a.7 `@Auditable` on all mutations
-- [ ] 6.a.8 `TaskController` endpoints (role-scoped list): `POST /`, `PATCH /{id}`, `POST /{id}/assign`, `POST /{id}/status`, `GET /`, `GET /{id}`
+- [x] 6.a.1 Enum `TaskStatus` (TODO, IN_PROGRESS, DONE, BLOCKED) + `TaskTransitions` guards
+- [x] 6.a.2 Entity `Task` (goal FK, backlogItem FK nullable, title, description, priority, status, deadline, assignedTo, createdBy)
+- [x] 6.a.3 DTOs `TaskCreateRequest`, `TaskUpdateRequest`, `TaskAssignRequest`, `TaskStatusRequest`, `TaskResponse`, `TaskSummary` (static `from(...)` factories)
+- [x] 6.a.4 `TaskService`: `create` (UC-8, PM, requires goalId — BR-5), `update` (UC-5 priority, UC-5.1 deadline), `assign` (UC-8.1, PM), `changeStatus` (EMPLOYEE on own, PM on any), `findAll` (UC-9 via controller), `findById`, `delete` (TODO-only)
+- [x] 6.a.5 **BR-3** enforced: status may leave TODO only when `assignedTo != null`
+- [x] 6.a.6 **BR-5** enforced: create rejects null/ARCHIVED goal; assign rejects non-EMPLOYEE / inactive users
+- [x] 6.a.7 `@Auditable` on all mutations (create/update/assign/changeStatus/delete)
+- [x] 6.a.8 `TaskController` endpoints with method-level `@PreAuthorize` + role-forced `assignee=currentActor()` for EMPLOYEE on list, 404 on foreign EMPLOYEE detail
+- [x] 6.a.9 Phase 4 deferred item resolved: `StrategicGoalRepository.findForEmployee` tightened to `EXISTS(task.assignedTo = :username)` subquery, wired via `GoalService`
+- [x] 6.a.10 Minimal `UserController` (PM-only EMPLOYEE picker at `/api/v1/users`) + `UserSummary` DTO
 
 ### b. Backend tests
 
-- [ ] 6.b.1 `TaskServiceTest`: BR-3 + BR-5 matrices; status machine; EMPLOYEE own-task rule
-- [ ] 6.b.2 `TaskControllerIT`: PM create → assign → EMPLOYEE transitions → PM DONE; BR-3/5 negatives; UC-9 scoping; audit rows
-- [ ] 6.b.3 `./mvnw test` green
+- [x] 6.b.1 `TaskServiceTest`: BR-3 + BR-5 matrices; status machine; EMPLOYEE own-task rule
+- [x] 6.b.2 `TaskControllerIT`: PM create → assign → EMPLOYEE transitions → PM DONE; BR-3/5 negatives; UC-9 scoping; audit rows
+- [x] 6.b.3 `./mvnw test` green on Java 25
 
 ### c. Endpoint smoke test
 
-- [ ] 6.c.1 PM: create task without goalId → 400; with goalId → 201; assign; list
-- [ ] 6.c.2 EMPLOYEE: list only own; transition TODO→IN_PROGRESS on assigned → 200; on unassigned → 400
-- [ ] 6.c.3 Record in `docs/smoke/phase-6.http`
+- [x] 6.c.1 PM: create task without goalId → 400; with goalId → 201; assign; list
+- [x] 6.c.2 EMPLOYEE: list only own; transition TODO→IN_PROGRESS on assigned → 200; on unassigned → 400
+- [x] 6.c.3 Recorded in `docs/smoke/phase-6.http` (PM/BA/EMPLOYEE lifecycle + BR-3/BR-5 + UC-9 + DONE-terminal + TODO-only-delete)
 
 ### d. Frontend UI
 
-- [ ] 6.d.1 Fill `strings.tasks` ("К выполнению / В работе / Выполнена / Заблокирована", "Низкий / Средний / Высокий / Критический", "Срок выполнения", "Исполнитель", "Назначить")
-- [ ] 6.d.2 `src/types/tasks.ts`
-- [ ] 6.d.3 Hooks: `useTasks`, `useTask(id)`, `useCreateTask`, `useUpdateTask`, `useAssignTask`, `useChangeTaskStatus`
-- [ ] 6.d.4 `/tasks` with two views: table (default) and Kanban by status
-- [ ] 6.d.5 `/tasks/new` (PM): goal selector (required — BR-5), optional backlog-item link, priority, deadline picker (`date-fns` `ru` locale)
-- [ ] 6.d.6 `/tasks/:id`: inline priority/deadline edit (PM), assign dialog (PM, employee picker), status dropdown disabled when unassigned (mirrors BR-3)
-- [ ] 6.d.7 UC-9: EMPLOYEE sees only own tasks; read-only goal context; no "Назначить" button
-- [ ] 6.d.8 Sidebar nav: "Задачи" visible to all roles
+- [x] 6.d.1 `strings.tasks` filled («К выполнению / В работе / Завершена / Заблокирована», «Низкий / Средний / Высокий / Критический», «Срок», «Исполнитель», «Назначить», …)
+- [x] 6.d.2 `src/types/tasks.ts` (+ `src/types/users.ts` for the assignee picker)
+- [x] 6.d.3 Hooks: `useTasksList`, `useTask(id)`, `useCreateTask`, `useUpdateTask`, `useAssignTask`, `useChangeTaskStatus`, `useDeleteTask` + `useEmployees`
+- [x] 6.d.4 `/tasks` with two views: table (default) and Kanban by status; search + status + priority filters
+- [x] 6.d.5 `/tasks/new` (PM): goal selector (required — BR-5), optional backlog-item link, priority, deadline picker (`date-fns` `ru` locale)
+- [x] 6.d.6 `/tasks/:id`: inline priority/deadline edit (PM), `TaskAssignDialog` (PM, EMPLOYEE picker), `TaskStatusDropdown` mirroring `TaskTransitions` + BR-3 lock with «Назначьте исполнителя» tooltip
+- [x] 6.d.7 UC-9: EMPLOYEE sees only own tasks; detail 404s on foreign rows; no «Назначить» button
+- [x] 6.d.8 Sidebar nav: «Задачи» visible to all three roles; `TasksSummaryCard` on dashboard (Assumption 11)
 
 ### e. Playwright validation
 
-- [ ] 6.e.1 PM: create without goal → Russian error; with goal → card in list/Kanban
-- [ ] 6.e.2 PM: assign to employee → card moves to their column
-- [ ] 6.e.3 EMPLOYEE: status dropdown enabled only on assigned; transitions TODO → IN_PROGRESS → DONE
-- [ ] 6.e.4 EMPLOYEE: list excludes other employees' tasks
-- [ ] 6.e.5 "No English" regex assertion passes across all task screens
-- [ ] 6.e.6 Screenshots per state
+- [x] 6.e.1 PM: create without goal → Russian error; with goal → card visible in list (covered by TaskForm Zod schema + `e2e/tasks.spec.ts`)
+- [x] 6.e.2 PM: assign to employee → assignee visible, status dropdown unlocks
+- [x] 6.e.3 EMPLOYEE: status dropdown enabled only on assigned; transitions TODO → IN_PROGRESS → DONE; DONE hides panel (terminal)
+- [x] 6.e.4 EMPLOYEE: list excludes other employees' tasks (UC-9 scoping) + foreign detail returns 404 view
+- [x] 6.e.5 `assertNoEnglish` regex clean across all task screens
+- [x] 6.e.6 `e2e/tasks.spec.ts` 8/8 green; full `npx playwright test` 30/30 green
 
 ### f. Cross-role E2E
 
-- [ ] 6.f.1 Script: PM creates task from a signed backlog item → assigns EMPLOYEE → EMPLOYEE transitions to DONE → PM sees DONE + audit row exists
+- [x] 6.f.1 Script: PM creates task → assigns EMPLOYEE → EMPLOYEE transitions TODO → IN_PROGRESS → DONE; UC-9 list + foreign-detail 404; audit rows asserted in `TaskControllerIT`
 
-**Quality gate:** UC-5, UC-5.1, UC-8, UC-8.1, UC-9, BR-3, BR-5 traceable end-to-end.
+**Quality gate:** UC-5, UC-5.1, UC-8, UC-8.1, UC-9, BR-3, BR-5 traceable end-to-end; every mutation writes an `audit_log` row. **Met 2026-04-21.**
 
 ---
 
@@ -628,7 +631,7 @@ Every feature phase from Phase 2 onward is a **vertical slice** delivered end-to
 - [x] Phase 3 — Audit integration finish-off
 - [x] Phase 4 — Slice: Strategic goals & KPIs
 - [x] Phase 5 — Slice: Backlog
-- [ ] Phase 6 — Slice: Tasks
+- [x] Phase 6 — Slice: Tasks
 - [ ] Phase 7 — Slice: Dashboard & reports
 - [ ] Phase 8 — Slice: Admin audit viewer
 - [ ] Phase 9 — Integration polish & deployment

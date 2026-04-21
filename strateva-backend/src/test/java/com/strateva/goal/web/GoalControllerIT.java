@@ -28,7 +28,7 @@ class GoalControllerIT extends AbstractPostgresIT {
 
     @BeforeEach
     void truncateGoalsAndKpis() {
-        jdbc.execute("TRUNCATE TABLE kpis, strategic_goals CASCADE");
+        jdbc.execute("TRUNCATE TABLE tasks, kpis, strategic_goals CASCADE");
     }
 
     private static final String VALID_GOAL = """
@@ -143,36 +143,70 @@ class GoalControllerIT extends AbstractPostgresIT {
     }
 
     @Test
-    void employee_listOnlyShowsActiveGoals_UC10() throws Exception {
+    void employee_listOnlyShowsActiveGoalsWithOwnTasks_UC9() throws Exception {
         String pm = loginAs("pm", "pmPass1!");
-        // DRAFT
+        // DRAFT (must be filtered out regardless)
         mockMvc.perform(post("/api/v1/goals")
                 .header(HttpHeaders.AUTHORIZATION, bearer(pm))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(VALID_GOAL)).andExpect(status().isCreated());
 
-        // ACTIVE
-        String secondBody = VALID_GOAL.replace("Увеличить выручку", "Активная цель");
-        String created = mockMvc.perform(post("/api/v1/goals")
+        // ACTIVE goal with task assigned to emp — must be visible
+        String withTaskBody = VALID_GOAL.replace("Увеличить выручку", "Активная с задачей");
+        String withTask = mockMvc.perform(post("/api/v1/goals")
                         .header(HttpHeaders.AUTHORIZATION, bearer(pm))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(secondBody))
+                        .content(withTaskBody))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
-        String id = objectMapper.readTree(created).get("id").asText();
-        mockMvc.perform(post("/api/v1/goals/" + id + "/submit")
-                .header(HttpHeaders.AUTHORIZATION, bearer(pm))).andExpect(status().isOk());
-        mockMvc.perform(post("/api/v1/goals/" + id + "/status")
-                .header(HttpHeaders.AUTHORIZATION, bearer(pm))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"status\":\"ACTIVE\"}")).andExpect(status().isOk());
+        String withTaskId = objectMapper.readTree(withTask).get("id").asText();
+        activate(pm, withTaskId);
+        assignTaskTo(pm, withTaskId, "emp");
+
+        // ACTIVE goal without any task for emp — must be hidden
+        String emptyBody = VALID_GOAL.replace("Увеличить выручку", "Активная без задачи");
+        String empty = mockMvc.perform(post("/api/v1/goals")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(pm))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(emptyBody))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String emptyId = objectMapper.readTree(empty).get("id").asText();
+        activate(pm, emptyId);
 
         String emp = loginAs("emp", "empPass1!");
         mockMvc.perform(get("/api/v1/goals")
                         .header(HttpHeaders.AUTHORIZATION, bearer(emp)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1))
-                .andExpect(jsonPath("$.content[0].status").value("ACTIVE"));
+                .andExpect(jsonPath("$.content[0].id").value(withTaskId));
+    }
+
+    private void activate(String pm, String goalId) throws Exception {
+        mockMvc.perform(post("/api/v1/goals/" + goalId + "/submit")
+                .header(HttpHeaders.AUTHORIZATION, bearer(pm))).andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/goals/" + goalId + "/status")
+                .header(HttpHeaders.AUTHORIZATION, bearer(pm))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"ACTIVE\"}")).andExpect(status().isOk());
+    }
+
+    private void assignTaskTo(String pm, String goalId, String assignee) throws Exception {
+        String taskBody = """
+                {"title":"Задача","goalId":"%s","priority":"HIGH"}
+                """.formatted(goalId);
+        String created = mockMvc.perform(post("/api/v1/tasks")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(pm))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(taskBody))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String taskId = objectMapper.readTree(created).get("id").asText();
+        mockMvc.perform(post("/api/v1/tasks/" + taskId + "/assignee")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(pm))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"assignee\":\"" + assignee + "\"}"))
+                .andExpect(status().isOk());
     }
 
     @Test

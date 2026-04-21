@@ -109,11 +109,10 @@ public class GoalService {
     }
 
     @Transactional(readOnly = true)
-    public Page<GoalSummary> findForEmployee(Pageable pageable) {
-        // UC-10 full spec (filter by Task.assignedTo = current user) requires the Task
-        // aggregate, which ships in Phase 6. Until then, employees see every ACTIVE goal
-        // system-wide. When tasks land, narrow via a join on Task.assignedTo.
-        Specification<StrategicGoal> spec = GoalSpecifications.status(GoalStatus.ACTIVE);
+    public Page<GoalSummary> findForEmployee(String username, Pageable pageable) {
+        // UC-9: employees see only ACTIVE goals that have at least one task assigned to them.
+        Specification<StrategicGoal> spec = GoalSpecifications.status(GoalStatus.ACTIVE)
+                .and(GoalSpecifications.hasTaskAssignedTo(username));
         return repository.findAll(spec, pageable).map(GoalSummary::from);
     }
 

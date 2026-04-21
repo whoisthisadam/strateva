@@ -1,6 +1,6 @@
 import type { ComponentType, SVGProps } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, ListTodo, Shield, Target } from 'lucide-react'
+import { ArrowRight, ClipboardList, ListTodo, Shield, Target } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -9,6 +9,7 @@ import { RoleGuard } from '@/components/RoleGuard'
 import { useAuth } from '@/auth/useAuth'
 import { useGoalsList } from '@/features/goals/useGoals'
 import { useBacklogsList } from '@/features/backlogs/useBacklogs'
+import { useTasksList } from '@/features/tasks/useTasks'
 import { strings } from '@/lib/strings'
 
 type Icon = ComponentType<SVGProps<SVGSVGElement>>
@@ -123,6 +124,32 @@ function BacklogsSummaryCard() {
   )
 }
 
+function TasksSummaryCard() {
+  const { user } = useAuth()
+  const total = useTasksList({ size: 1 })
+  const inProgress = useTasksList({ status: 'IN_PROGRESS', size: 1 })
+  const isLoading = total.isLoading || inProgress.isLoading
+  const isEmployee = user?.role === 'EMPLOYEE'
+  return (
+    <SummaryCard
+      testId="dashboard-card-tasks"
+      icon={ClipboardList}
+      title={strings.dashboard.cards.tasks.title}
+      description={strings.dashboard.cards.tasks.description}
+      stats={[
+        { label: strings.dashboard.statsTotal, value: formatCount(total.data?.totalElements, isLoading) },
+        {
+          label: isEmployee
+            ? strings.dashboard.cards.tasks.statsMine
+            : strings.dashboard.cards.tasks.statsInProgress,
+          value: formatCount(inProgress.data?.totalElements, isLoading),
+        },
+      ]}
+      to="/tasks"
+    />
+  )
+}
+
 export function DashboardPage() {
   const { user } = useAuth()
   if (!user) return null
@@ -163,12 +190,13 @@ export function DashboardPage() {
 
       <section
         aria-label={strings.nav.dashboard}
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
       >
         <GoalsSummaryCard />
         <RoleGuard allow={['PROJECT_MANAGER', 'BUSINESS_ANALYST']}>
           <BacklogsSummaryCard />
         </RoleGuard>
+        <TasksSummaryCard />
       </section>
     </div>
   )

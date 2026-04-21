@@ -24,6 +24,7 @@ const NAV_ITEMS: readonly NavItem[] = [
     end: false,
     allow: ['PROJECT_MANAGER', 'BUSINESS_ANALYST'],
   },
+  { to: '/tasks', label: strings.nav.tasks, end: false },
 ]
 
 export function AppShell() {
