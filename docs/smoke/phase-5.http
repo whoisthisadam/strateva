@@ -1,0 +1,147 @@
+### Phase 5 — Backlog slice smoke tests (UC-4, UC-6, UC-7, UC-7.1, UC-7.2, BR-2)
+### Prereqs: backend on http://localhost:8080 with seeded users (pm/ba/emp).
+### Usage (IntelliJ HTTP client or VSCode REST Client): run requests top-to-bottom;
+### variables {{pmToken}}, {{baToken}}, {{goalId}}, {{backlogId}}, {{itemId}} are
+### captured via the response handlers below.
+
+@host = http://localhost:8080
+
+### 1. PM login
+# @name pmLogin
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username": "pm", "password": "pmPass1!"}
+
+> {% client.global.set("pmToken", response.body.token); %}
+
+### 2. BA login
+# @name baLogin
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username": "ba", "password": "baPass1!"}
+
+> {% client.global.set("baToken", response.body.token); %}
+
+### 3. EMPLOYEE login
+# @name empLogin
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username": "emp", "password": "empPass1!"}
+
+> {% client.global.set("empToken", response.body.token); %}
+
+### 4. PM creates a goal (backlog needs a parent goal; BR-2) → 201
+# @name createGoal
+POST {{host}}/api/v1/goals
+Authorization: Bearer {{pmToken}}
+Content-Type: application/json
+
+{
+  "title": "Цель под бэклог Q1",
+  "periodStart": "2026-01-01",
+  "periodEnd": "2026-12-31",
+  "priority": "HIGH",
+  "kpis": [{"name": "KPI-1", "targetValue": 100, "currentValue": 0, "unit": "шт."}]
+}
+
+> {% client.global.set("goalId", response.body.id); %}
+
+### 5. BA creates a DRAFT backlog with 2 items (UC-4, UC-6) → 201
+# @name createBacklog
+POST {{host}}/api/v1/backlogs
+Authorization: Bearer {{baToken}}
+Content-Type: application/json
+
+{
+  "title": "Бэклог Q1",
+  "goalId": "{{goalId}}",
+  "items": [
+    {"title": "Интеграция платёжного шлюза", "description": "Stripe + 3DS", "priority": "HIGH"},
+    {"title": "Модуль отчётности", "description": "Excel-экспорт", "priority": "MEDIUM"}
+  ]
+}
+
+> {% client.global.set("backlogId", response.body.id);
+     client.global.set("itemId", response.body.items[0].id); %}
+
+### 6. BA adds one more item to the DRAFT (UC-6) → 200
+POST {{host}}/api/v1/backlogs/{{backlogId}}/items
+Authorization: Bearer {{baToken}}
+Content-Type: application/json
+
+{"title": "Личный кабинет клиента", "description": "SSO + профиль", "priority": "LOW"}
+
+### 7. BA updates an item (UC-6) → 200
+PATCH {{host}}/api/v1/backlogs/{{backlogId}}/items/{{itemId}}
+Authorization: Bearer {{baToken}}
+Content-Type: application/json
+
+{"title": "Интеграция Stripe", "description": "Stripe + 3DS + webhooks", "priority": "CRITICAL"}
+
+### 8. BA submits for approval (DRAFT → SUBMITTED, UC-7) → 200
+POST {{host}}/api/v1/backlogs/{{backlogId}}/submit
+Authorization: Bearer {{baToken}}
+
+### 9. BA tries to sign their own backlog → 403 (UC-7.1 reserved for PM)
+POST {{host}}/api/v1/backlogs/{{backlogId}}/sign
+Authorization: Bearer {{baToken}}
+
+### 10. BA tries to edit items after submit → 400 (item mutation locked)
+POST {{host}}/api/v1/backlogs/{{backlogId}}/items
+Authorization: Bearer {{baToken}}
+Content-Type: application/json
+
+{"title": "Поздняя правка", "priority": "LOW"}
+
+### 11. PM lists backlogs (sees all) → 200
+GET {{host}}/api/v1/backlogs
+Authorization: Bearer {{pmToken}}
+
+### 12. BA lists backlogs (only own) → 200, createdBy = "ba"
+GET {{host}}/api/v1/backlogs
+Authorization: Bearer {{baToken}}
+
+### 13. EMPLOYEE tries to list backlogs → 403
+GET {{host}}/api/v1/backlogs
+Authorization: Bearer {{empToken}}
+
+### 14. PM reads the full backlog → 200
+GET {{host}}/api/v1/backlogs/{{backlogId}}
+Authorization: Bearer {{pmToken}}
+
+### 15. PM signs the submitted backlog (SUBMITTED → SIGNED, UC-7.1) → 200
+POST {{host}}/api/v1/backlogs/{{backlogId}}/sign
+Authorization: Bearer {{pmToken}}
+
+### 16. PM re-sign attempt → 400 (SIGNED is terminal)
+POST {{host}}/api/v1/backlogs/{{backlogId}}/sign
+Authorization: Bearer {{pmToken}}
+
+### 17. PM cancel attempt on SIGNED backlog → 400
+POST {{host}}/api/v1/backlogs/{{backlogId}}/cancel
+Authorization: Bearer {{pmToken}}
+
+### 18. BA creates a second backlog to test cancel flow (UC-7.2) → 201
+# @name createBacklog2
+POST {{host}}/api/v1/backlogs
+Authorization: Bearer {{baToken}}
+Content-Type: application/json
+
+{
+  "title": "Бэклог под отмену",
+  "goalId": "{{goalId}}",
+  "items": [{"title": "Временная задача", "priority": "LOW"}]
+}
+
+> {% client.global.set("backlogId2", response.body.id); %}
+
+### 19. BA submits the second backlog → 200
+POST {{host}}/api/v1/backlogs/{{backlogId2}}/submit
+Authorization: Bearer {{baToken}}
+
+### 20. PM cancels the submitted backlog (SUBMITTED → CANCELLED, UC-7.2) → 200
+POST {{host}}/api/v1/backlogs/{{backlogId2}}/cancel
+Authorization: Bearer {{pmToken}}

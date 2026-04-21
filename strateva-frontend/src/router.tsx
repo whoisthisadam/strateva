@@ -8,6 +8,9 @@ import { GoalsListPage } from '@/pages/GoalsListPage'
 import { GoalCreatePage } from '@/pages/GoalCreatePage'
 import { GoalEditPage } from '@/pages/GoalEditPage'
 import { GoalDetailPage } from '@/pages/GoalDetailPage'
+import { BacklogListPage } from '@/pages/BacklogListPage'
+import { BacklogCreatePage } from '@/pages/BacklogCreatePage'
+import { BacklogDetailPage } from '@/pages/BacklogDetailPage'
 
 export const router = createBrowserRouter([
   {
@@ -38,6 +41,30 @@ export const router = createBrowserRouter([
         element: (
           <RequireRole allow={['PROJECT_MANAGER']} redirectTo="/goals">
             <GoalEditPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: 'backlogs',
+        element: (
+          <RequireRole allow={['PROJECT_MANAGER', 'BUSINESS_ANALYST']}>
+            <BacklogListPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: 'backlogs/new',
+        element: (
+          <RequireRole allow={['BUSINESS_ANALYST']} redirectTo="/backlogs">
+            <BacklogCreatePage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: 'backlogs/:id',
+        element: (
+          <RequireRole allow={['PROJECT_MANAGER', 'BUSINESS_ANALYST']}>
+            <BacklogDetailPage />
           </RequireRole>
         ),
       },

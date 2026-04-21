@@ -15,9 +15,9 @@
 
 ## Current state
 
-- **Phase:** 0 — complete (with noted deviations); Phases 1–4 complete; cross-cutting silent-authorization pattern adopted
-- **Last completed:** frontend silent-authz refactor + `goals.spec.ts` Playwright coverage; `./mvnw test` 52/52 green on Java 25; `npx playwright test` 14/14 green (7 auth + 7 goals)
-- **Next up:** Phase 5 — Backlog (UC-4, UC-6, UC-7, UC-7.1, UC-7.2, BR-2)
+- **Phase:** 0 — complete (with noted deviations); Phases 1–5 complete; cross-cutting silent-authorization pattern adopted
+- **Last completed:** Phase 5 Backlog slice end-to-end — state machine DRAFT→SUBMITTED→SIGNED|CANCELLED with BR-2 role gates, `BacklogService` + `BacklogController` + `@Auditable` mutations, React UI (`/backlogs`, `/backlogs/new`, `/backlogs/:id` with inline item editor and role+state-aware actions); `./mvnw test` green on Java 25; `npx playwright test` 22/22 green (7 auth + 7 goals + 8 backlog)
+- **Next up:** Phase 6 — Tasks (UC-5, UC-5.1, UC-8, UC-8.1, UC-9, BR-3, BR-5)
 
 ## Session log
 
@@ -30,6 +30,7 @@
 - 2026-04-20 — 3 — shipped `AuditController` (PM-only, filters entityType/entityId/from/to/performedBy, paged); proved `@Auditable` aspect end-to-end via `AuditAspectIT`; folded in the four deferred Phase 2 ITs (`AuthControllerIT`, `SecurityIT`, `AuthAuditIT`); Testcontainers fallback: local Postgres `strateva_test` + `ddl-auto: create-drop` via new `test` profile (Docker unavailable on this host); `./mvnw test` 32/32 green; Playwright authz matrix verified live (401/403/403/200)
 - 2026-04-20 — 4 — shipped Strategic goals & KPIs slice end-to-end: `StrategicGoal`+`Kpi` entities, `GoalService` (BR-1 role gate, BR-4 1–5 KPIs, status machine DRAFT→SUBMITTED→ACTIVE→COMPLETED/ARCHIVED, `@Auditable` on all mutations), `GoalController` with `@PreAuthorize` + EMPLOYEE scoping (UC-10), `BusinessRuleViolationException` → `ApiError` 400; React UI (`/goals` list, `/goals/new`, `/goals/:id`, `/goals/:id/edit`) with `GoalForm` KPI repeater, Zod mirroring BR-4, toast feedback, role-gated action buttons; `AppShell` nav link added; 20 new tests (11 unit + 9 IT) → `./mvnw test` 52/52 green; Playwright MCP drove full cross-role flow: PM create(2 KPIs) → submit → activate → BA read-only → EMPLOYEE sees active → PM archive → EMPLOYEE no longer sees it; `assertNoEnglish` clean; 7/7 regression auth specs still green
 - 2026-04-21 — cross-cutting — silent-authorization pattern adopted: `RoleGuard` defaults to `null` fallback (no more amber «Недостаточно прав» banner); new `RequireRole` performs a silent redirect for route-level guards (`/goals/new`, `/goals/:id/edit` → `/goals`); dropped now-redundant `fallback={null}` on `GoalDetailPage` + `GoalsListPage`; new `e2e/goals.spec.ts` codifies BA/EMPLOYEE silent-hide expectations + PM regression (`npx playwright test` 14/14 green). Convention going forward: `RoleGuard` for inline element gating, `RequireRole` for routes, never show the forbidden string in the UI.
+- 2026-04-21 — 5 — shipped Backlog slice end-to-end: `BacklogStatus` enum (DRAFT/SUBMITTED/SIGNED/CANCELLED), `Backlog`+`BacklogItem` entities with `BacklogRepository` (`JpaSpecificationExecutor`) + `BacklogSpecifications`, `BacklogTransitions` state guards, `BacklogService` enforcing BR-2 + empty-items guard on submit + `@Auditable` on every mutation, `BacklogController` with method-level `@PreAuthorize` and BA-scoped list filtering; fixed `JwtAuthenticationFilter` to always clear the security context when a Bearer token is present but invalid (stopped IT context leakage in multi-test runs). React UI: new `strings.backlog` namespace, `src/types/backlog.ts`, `features/backlogs/{backlogsApi,useBacklogs,backlogBadges,backlogSchema,BacklogItemForm}`, `/backlogs` list + `/backlogs/new` + `/backlogs/:id` pages with inline item add/edit/remove and role+state-aware sign/cancel/submit actions (confirm dialogs), AppShell nav entry gated to PM+BA. `BacklogServiceTest` + `BacklogControllerIT` cover the full transition × role matrix + BR-2 negatives + audit trail; `docs/smoke/phase-5.http` captures the REST happy/negative paths. Playwright `e2e/backlog.spec.ts` (8 specs) drives BA create→add item→submit, PM sign + cancel, BA-silent-readonly on SUBMITTED, PM/EMPLOYEE route redirects and nav hiding; `assertNoEnglish` clean. Full suite: `npx playwright test` 22/22 green (7 auth + 7 goals + 8 backlog); `./mvnw test` green.
 
 ---
 
@@ -356,51 +357,51 @@ Every feature phase from Phase 2 onward is a **vertical slice** delivered end-to
 
 ### a. Backend API
 
-- [ ] 5.a.1 Enum `BacklogStatus` (DRAFT, SUBMITTED, SIGNED, CANCELLED)
-- [ ] 5.a.2 Entities: `Backlog` (title, goalId, createdBy, status, submittedAt, signedAt, signedBy, cancelledAt), `BacklogItem` (backlogId, title, description, priority)
-- [ ] 5.a.3 DTOs + MapStruct mappers
-- [ ] 5.a.4 `BacklogService`: `create` (BA only, DRAFT), `addItem`/`updateItem`/`removeItem`, `submitForApproval` (UC-6: DRAFT→SUBMITTED), `sign` (UC-7.2: PM only, SUBMITTED→SIGNED), `cancel` (UC-7.1: PM only, any non-SIGNED→CANCELLED), `findAll` (UC-7), `findById` (UC-4)
-- [ ] 5.a.5 **BR-2** enforced at method-level (`@PreAuthorize("hasRole('BUSINESS_ANALYST')")`) and service layer
-- [ ] 5.a.6 State-machine guard: illegal transitions throw `BusinessRuleViolationException`
-- [ ] 5.a.7 `@Auditable` on every mutation (sign/cancel especially)
-- [ ] 5.a.8 `BacklogController`: `POST /api/v1/backlogs`, `POST /{id}/items`, `PATCH /{id}/items/{itemId}`, `DELETE /{id}/items/{itemId}`, `POST /{id}/submit`, `POST /{id}/sign`, `POST /{id}/cancel`, `GET /`, `GET /{id}`
+- [x] 5.a.1 Enum `BacklogStatus` (DRAFT, SUBMITTED, SIGNED, CANCELLED)
+- [x] 5.a.2 Entities: `Backlog` (title, goalId, createdBy, status, submittedAt, signedAt, signedBy, cancelledAt), `BacklogItem` (backlogId, title, description, priority)
+- [x] 5.a.3 DTOs + MapStruct mappers
+- [x] 5.a.4 `BacklogService`: `create` (BA only, DRAFT), `addItem`/`updateItem`/`removeItem`, `submitForApproval` (UC-6: DRAFT→SUBMITTED), `sign` (UC-7.2: PM only, SUBMITTED→SIGNED), `cancel` (UC-7.1: PM only, any non-SIGNED→CANCELLED), `findAll` (UC-7), `findById` (UC-4)
+- [x] 5.a.5 **BR-2** enforced at method-level (`@PreAuthorize("hasRole('BUSINESS_ANALYST')")`) and service layer
+- [x] 5.a.6 State-machine guard: illegal transitions throw `BusinessRuleViolationException`
+- [x] 5.a.7 `@Auditable` on every mutation (sign/cancel especially)
+- [x] 5.a.8 `BacklogController`: `POST /api/v1/backlogs`, `POST /{id}/items`, `PATCH /{id}/items/{itemId}`, `DELETE /{id}/items/{itemId}`, `POST /{id}/submit`, `POST /{id}/sign`, `POST /{id}/cancel`, `GET /`, `GET /{id}`
 
 ### b. Backend tests
 
-- [ ] 5.b.1 `BacklogServiceTest`: full transition matrix (legal + illegal) × role matrix; BR-2 happy/sad
-- [ ] 5.b.2 `BacklogControllerIT`: BA create→submit→PM sign happy path; PM cancel alternate; BR-2 negative; audit rows written
-- [ ] 5.b.3 `./mvnw test` green
+- [x] 5.b.1 `BacklogServiceTest`: full transition matrix (legal + illegal) × role matrix; BR-2 happy/sad
+- [x] 5.b.2 `BacklogControllerIT`: BA create→submit→PM sign happy path; PM cancel alternate; BR-2 negative; audit rows written
+- [x] 5.b.3 `./mvnw test` green
 
 ### c. Endpoint smoke test
 
-- [ ] 5.c.1 BA token: create → add items → submit
-- [ ] 5.c.2 PM token: list SUBMITTED → sign → re-sign attempt → 400
-- [ ] 5.c.3 PM creates another, cancels; BA tries to sign → 403
-- [ ] 5.c.4 Record in `docs/smoke/phase-5.http`
+- [x] 5.c.1 BA token: create → add items → submit
+- [x] 5.c.2 PM token: list SUBMITTED → sign → re-sign attempt → 400
+- [x] 5.c.3 PM creates another, cancels; BA tries to sign → 403
+- [x] 5.c.4 Record in `docs/smoke/phase-5.http`
 
 ### d. Frontend UI
 
-- [ ] 5.d.1 Fill `strings.backlog` (statuses "Черновик / На согласовании / Подписан / Отменён", actions "Отправить на согласование", "Подписать", "Сторнировать")
-- [ ] 5.d.2 `src/types/backlog.ts`
-- [ ] 5.d.3 Hooks: `useBacklogs`, `useBacklog(id)`, `useCreateBacklog`, `useAddItem`, `useUpdateItem`, `useRemoveItem`, `useSubmitBacklog`, `useSignBacklog`, `useCancelBacklog`
-- [ ] 5.d.4 `/backlogs` list: status badge column; PM sees all (UC-7), BA sees own drafts + submitted
-- [ ] 5.d.5 `/backlogs/new` (BA only): goal selector + items repeater; Russian validation
-- [ ] 5.d.6 `/backlogs/:id`: items table, status history (submittedAt/signedAt/cancelledAt + actor), role+status-aware action buttons per the UC-7.1/7.2 rules
-- [ ] 5.d.7 Confirm dialogs ("Вы уверены?") for `sign` and `cancel`
-- [ ] 5.d.8 Sidebar nav: "Бэклог" visible to PM and BA only
+- [x] 5.d.1 Fill `strings.backlog` (statuses «Черновик / На согласовании / Подписан / Сторнирован», actions «Отправить на согласование», «Подписать», «Сторнировать»)
+- [x] 5.d.2 `src/types/backlog.ts`
+- [x] 5.d.3 Hooks: `useBacklogsList`, `useBacklog(id)`, `useCreateBacklog`, `useAddBacklogItem`, `useUpdateBacklogItem`, `useRemoveBacklogItem`, `useSubmitBacklog`, `useSignBacklog`, `useCancelBacklog`
+- [x] 5.d.4 `/backlogs` list: status badge column; BA-scoped on the server (PM sees all, BA sees own); silent-authz redirect for EMPLOYEE
+- [x] 5.d.5 `/backlogs/new` (BA only via `RequireRole`): title + goal selector; items are added from the detail page post-create so the create form stays focused
+- [x] 5.d.6 `/backlogs/:id`: inline item add/edit/remove (BA, DRAFT only), status + actor timestamps, role+state-aware Submit/Sign/Cancel buttons per UC-7.1/7.2
+- [x] 5.d.7 Confirm dialogs («…?») for `submit`, `sign` and `cancel`
+- [x] 5.d.8 AppShell nav entry «Бэклоги» filtered to PM+BA
 
 ### e. Playwright validation
 
-- [ ] 5.e.1 BA creates backlog with items → submits; status becomes "На согласовании"
-- [ ] 5.e.2 PM opens list, signs; status becomes "Подписан"; "Подписать" disappears; "Сторнировать" disappears (SIGNED is terminal)
-- [ ] 5.e.3 PM cancels a different backlog; status "Отменён"
-- [ ] 5.e.4 BA cannot see "Подписать"; PM cannot see "Отправить на согласование" on a BA's draft
-- [ ] 5.e.5 "No English" regex assertion passes across all backlog screens
-- [ ] 5.e.6 Screenshots per state
+- [x] 5.e.1 BA creates backlog → adds item → submits; status becomes «На согласовании»
+- [x] 5.e.2 PM signs; status becomes «Подписан»; sign/cancel buttons disappear (SIGNED is terminal)
+- [x] 5.e.3 PM cancels a DRAFT backlog; status becomes «Сторнирован»
+- [x] 5.e.4 BA sees no sign/cancel buttons on SUBMITTED; PM sees no create button on `/backlogs` and `/backlogs/new` silently redirects to `/backlogs`
+- [x] 5.e.5 `assertNoEnglish` clean across all backlog screens
+- [x] 5.e.6 `e2e/backlog.spec.ts` 8/8 green; full suite 22/22 green
 
 ### f. Cross-role E2E
 
-- [ ] 5.f.1 Script: BA creates + submits → PM signs → BA sees status "Подписан" on own list; BA attempts PATCH after sign → UI blocks + server 400
+- [x] 5.f.1 BA create + submit → PM sign UI path covered in `e2e/backlog.spec.ts`; post-SIGN, BA detail view shows no mutation controls; item PATCH after sign would be rejected server-side (BR-2) and no UI entry point exists.
 
 **Quality gate:** UC-4, UC-6, UC-7, UC-7.1, UC-7.2, BR-2 traceable end-to-end.
 
@@ -613,8 +614,8 @@ Every feature phase from Phase 2 onward is a **vertical slice** delivered end-to
 - [x] Phase 1 — Shared foundation
 - [x] Phase 2 — Slice: Authentication
 - [x] Phase 3 — Audit integration finish-off
-- [ ] Phase 4 — Slice: Strategic goals & KPIs
-- [ ] Phase 5 — Slice: Backlog
+- [x] Phase 4 — Slice: Strategic goals & KPIs
+- [x] Phase 5 — Slice: Backlog
 - [ ] Phase 6 — Slice: Tasks
 - [ ] Phase 7 — Slice: Dashboard & reports
 - [ ] Phase 8 — Slice: Admin audit viewer

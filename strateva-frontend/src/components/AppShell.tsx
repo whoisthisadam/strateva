@@ -4,13 +4,27 @@ import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/ui/avatar'
 import { Logo } from '@/components/brand/Logo'
 import { useAuth } from '@/auth/useAuth'
+import type { Role } from '@/auth/types'
 import { cn } from '@/lib/cn'
 import { strings } from '@/lib/strings'
 
-const NAV_ITEMS = [
+interface NavItem {
+  to: string
+  label: string
+  end: boolean
+  allow?: readonly Role[]
+}
+
+const NAV_ITEMS: readonly NavItem[] = [
   { to: '/', label: strings.nav.dashboard, end: true },
   { to: '/goals', label: strings.nav.goals, end: false },
-] as const
+  {
+    to: '/backlogs',
+    label: strings.nav.backlogs,
+    end: false,
+    allow: ['PROJECT_MANAGER', 'BUSINESS_ANALYST'],
+  },
+]
 
 export function AppShell() {
   const { user, logout } = useAuth()
@@ -32,7 +46,9 @@ export function AppShell() {
           </div>
           {user && (
             <nav aria-label={strings.nav.dashboard} className="hidden items-center gap-1 md:flex">
-              {NAV_ITEMS.map((item) => (
+              {NAV_ITEMS.filter(
+                (item) => !item.allow || item.allow.includes(user.role),
+              ).map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
