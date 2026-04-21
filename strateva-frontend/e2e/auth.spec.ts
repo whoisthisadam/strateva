@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { assertNoEnglish } from './helpers/assertNoEnglish'
 import { TEST_USERS, type TestUserKey } from './helpers/users'
 
-const BRAND_ALLOW = [/^Strateva$/]
+const BRAND_ALLOW = [/^Strateva$/, /^KPI$/]
 
 test.describe('Authentication — UC-1', () => {
   test.beforeEach(async ({ page }) => {

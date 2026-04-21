@@ -14,6 +14,8 @@ import { BacklogDetailPage } from '@/pages/BacklogDetailPage'
 import { TasksListPage } from '@/pages/TasksListPage'
 import { TaskCreatePage } from '@/pages/TaskCreatePage'
 import { TaskDetailPage } from '@/pages/TaskDetailPage'
+import { AnalyticsPage } from '@/pages/AnalyticsPage'
+import { ReportsPage } from '@/pages/ReportsPage'
 
 export const router = createBrowserRouter([
   {
@@ -81,6 +83,22 @@ export const router = createBrowserRouter([
         ),
       },
       { path: 'tasks/:id', element: <TaskDetailPage /> },
+      {
+        path: 'analytics',
+        element: (
+          <RequireRole allow={['PROJECT_MANAGER']}>
+            <AnalyticsPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: 'reports',
+        element: (
+          <RequireRole allow={['PROJECT_MANAGER']}>
+            <ReportsPage />
+          </RequireRole>
+        ),
+      },
     ],
   },
   {

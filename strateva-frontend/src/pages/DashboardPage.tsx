@@ -10,6 +10,7 @@ import { useAuth } from '@/auth/useAuth'
 import { useGoalsList } from '@/features/goals/useGoals'
 import { useBacklogsList } from '@/features/backlogs/useBacklogs'
 import { useTasksList } from '@/features/tasks/useTasks'
+import { ReportsSummaryCard } from '@/features/reports/ReportsSummaryCard'
 import { strings } from '@/lib/strings'
 
 type Icon = ComponentType<SVGProps<SVGSVGElement>>
@@ -197,6 +198,9 @@ export function DashboardPage() {
           <BacklogsSummaryCard />
         </RoleGuard>
         <TasksSummaryCard />
+        <RoleGuard allow={['PROJECT_MANAGER']}>
+          <ReportsSummaryCard />
+        </RoleGuard>
       </section>
     </div>
   )

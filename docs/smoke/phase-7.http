@@ -1,0 +1,118 @@
+### Phase 7 — Reports & Analytics smoke tests (BR-6, PM-only)
+### Prereqs: backend on http://localhost:8080 with seeded users (pm/ba/emp).
+### Run top-to-bottom in IntelliJ or VSCode REST Client; variables {{pmToken}},
+### {{baToken}}, {{empToken}}, {{goalId}} are captured via response handlers.
+
+@host = http://localhost:8080
+
+### 1. PM login
+# @name pmLogin
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username": "pm", "password": "pmPass1!"}
+
+> {% client.global.set("pmToken", response.body.token); %}
+
+### 2. BA login
+# @name baLogin
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username": "ba", "password": "baPass1!"}
+
+> {% client.global.set("baToken", response.body.token); %}
+
+### 3. EMPLOYEE login
+# @name empLogin
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username": "emp", "password": "empPass1!"}
+
+> {% client.global.set("empToken", response.body.token); %}
+
+### 4. Seed an ACTIVE goal so reports are non-empty → 201
+# @name createGoal
+POST {{host}}/api/v1/goals
+Authorization: Bearer {{pmToken}}
+Content-Type: application/json
+
+{
+  "title": "Цель для отчётов",
+  "periodStart": "2026-01-01",
+  "periodEnd": "2026-12-31",
+  "priority": "HIGH",
+  "kpis": [{"name": "Выручка", "targetValue": 1000, "currentValue": 250, "unit": "руб."}]
+}
+
+> {% client.global.set("goalId", response.body.id); %}
+
+### 5. Submit → ACTIVE so tasks may be created on it
+POST {{host}}/api/v1/goals/{{goalId}}/submit
+Authorization: Bearer {{pmToken}}
+
+### 6. Activate the goal
+POST {{host}}/api/v1/goals/{{goalId}}/status
+Authorization: Bearer {{pmToken}}
+Content-Type: application/json
+
+{"status": "ACTIVE"}
+
+### 7. PM creates a task on the active goal → 201
+POST {{host}}/api/v1/tasks
+Authorization: Bearer {{pmToken}}
+Content-Type: application/json
+
+{"title": "Задача для отчётов", "description": "d", "goalId": "{{goalId}}", "priority": "HIGH"}
+
+### 8. PM — overview (analytics header) → 200 JSON
+GET {{host}}/api/v1/reports/overview
+Authorization: Bearer {{pmToken}}
+
+### 9. PM — goals progress → 200 JSON (rows[].percent)
+GET {{host}}/api/v1/reports/goals-progress
+Authorization: Bearer {{pmToken}}
+
+### 10. PM — goals progress CSV → 200 text/csv; attachment
+GET {{host}}/api/v1/reports/goals-progress?format=csv
+Authorization: Bearer {{pmToken}}
+
+### 11. PM — KPI progress → 200 JSON
+GET {{host}}/api/v1/reports/kpis-progress
+Authorization: Bearer {{pmToken}}
+
+### 12. PM — KPI progress CSV → 200 text/csv
+GET {{host}}/api/v1/reports/kpis-progress?format=csv
+Authorization: Bearer {{pmToken}}
+
+### 13. PM — task workload (assignee × status) → 200 JSON
+GET {{host}}/api/v1/reports/task-workload
+Authorization: Bearer {{pmToken}}
+
+### 14. PM — overdue tasks → 200 JSON
+GET {{host}}/api/v1/reports/overdue-tasks
+Authorization: Bearer {{pmToken}}
+
+### 15. PM — backlog throughput → 200 JSON
+GET {{host}}/api/v1/reports/backlog-throughput
+Authorization: Bearer {{pmToken}}
+
+### 16. BA — overview → 403
+GET {{host}}/api/v1/reports/overview
+Authorization: Bearer {{baToken}}
+
+### 17. BA — goals progress → 403
+GET {{host}}/api/v1/reports/goals-progress
+Authorization: Bearer {{baToken}}
+
+### 18. EMPLOYEE — overview → 403
+GET {{host}}/api/v1/reports/overview
+Authorization: Bearer {{empToken}}
+
+### 19. EMPLOYEE — overdue tasks CSV → 403
+GET {{host}}/api/v1/reports/overdue-tasks?format=csv
+Authorization: Bearer {{empToken}}
+
+### 20. Unauthenticated — any report → 401
+GET {{host}}/api/v1/reports/overview

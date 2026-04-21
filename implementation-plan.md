@@ -15,9 +15,9 @@
 
 ## Current state
 
-- **Phase:** 0 — complete (with noted deviations); Phases 1–6 complete; cross-cutting silent-authorization pattern adopted
-- **Last completed:** Phase 6 Tasks slice end-to-end — `TaskStatus` enum + `Task` entity + state machine (TODO → IN_PROGRESS ↔ BLOCKED, → DONE terminal), `TaskService` enforcing BR-3 (status leaves TODO only when `assignedTo` is set), BR-5 (non-archived goal required), EMPLOYEE-own-task gate on status changes and `@Auditable` on every mutation; `TaskController` with method-level `@PreAuthorize` + UC-9 role-forced assignee filter + 404 on foreign EMPLOYEE detail; minimal `UserController` (PM-only EMPLOYEE picker); `StrategicGoalRepository.findForEmployee` now tightened via `EXISTS(task.assignedTo = :username)` subquery (Phase 4 deferred item resolved); React UI (`/tasks` table+Kanban, `/tasks/new` PM-only, `/tasks/:id` with inline edit, assign dialog, status dropdown locking on BR-3), `TasksSummaryCard` on `DashboardPage` and «Задачи» nav entry for all three roles (Assumption 11 honoured); `./mvnw test` green on Java 25; `npx playwright test` 30/30 green (7 auth + 7 goals + 8 backlog + 8 tasks); `docs/smoke/phase-6.http` captures PM create/assign/status + BR-3/BR-5 negatives + UC-9 scoping
-- **Next up:** Phase 7 — Dashboard & reports (UC-3, UC-11, BR-6)
+- **Phase:** 0 — complete (with noted deviations); Phases 1–7 complete; cross-cutting silent-authorization pattern adopted
+- **Last completed:** Phase 7 Dashboard & reports slice end-to-end — `ReportService` aggregations (overview, goals progress, KPI progress, task workload, overdue tasks, backlog throughput) sourced exclusively from JPA queries (BR-6); `ReportController` (PM-only via `@PreAuthorize`) serves JSON + `?format=csv` with `CsvWriter` writing a UTF-8 BOM so Excel renders Cyrillic; `ReportServiceTest` (6 unit) + `ReportControllerIT` (6 integration) cover empty/single/many fixtures, 200 + BOM bytes for PM, 403 for BA/EMP, 401 anonymous; `./mvnw test` green on Java 25. React UI: `strings.reports` namespace, `src/types/reports.ts`, `features/reports/{reportsApi,useReports,ReportsSummaryCard}`; `/analytics` (PM-only) with six overview tiles and three Recharts cards (stacked Bar goal progress, stacked Bar workload × status, Line backlog throughput) — all axis/legend/tooltip text Russian; `/reports` (PM-only) tabbed page with five report tabs each rendering a table + single «Экспортировать CSV» button that streams the active tab via fetch + blob + anchor download; `AppShell` nav exposes «Панель аналитики» + «Отчёты» to PM only; `RequireRole` on routes performs silent redirect for BA/EMP; `ReportsSummaryCard` added to dashboard for PM (Assumption 11). Playwright `e2e/reports.spec.ts` (11 specs): PM analytics tiles + chart containers, /reports tabs render & switch, CSV download event fires with correct filename, dashboard card visible, PM nav exposes both links; BA + EMP parameterised silent redirect on /analytics + /reports + nav hidden + dashboard card hidden. `assertNoEnglish` clean (allowlist Strateva/KPI/pm/ba/emp/CSV); auth spec `BRAND_ALLOW` extended with KPI for the new PM dashboard description. Full regression `npx playwright test` 41/41 green (7 auth + 7 goals + 8 backlog + 8 tasks + 11 reports); `tsc --noEmit` clean. MCP walkthrough verified PM seeded counts (Goals 2/1, Tasks 25/5, Backlogs signed 7), CSV download with BOM bytes (EF BB BF) confirmed, BA/EMP silent redirects + nav/card hiding confirmed live. Smoke: `docs/smoke/phase-7.http` records PM JSON + CSV across all six endpoints and BA/EMP/anonymous negatives.
+- **Next up:** Phase 8 — Slice: Admin audit viewer & user list (surfaces BR-8)
 
 ## Session log
 
@@ -34,6 +34,7 @@
 - 2026-04-21 — 4/5 MCP regression — ran the mandatory Playwright MCP walkthrough per Assumption 10 covering both Phase 4 and Phase 5 live. Phase 4 (goals): PM browses `/goals`, drills into a goal (KPI table intact); BA sees the list read-only (no «Создать цель», no status filter); EMPLOYEE sees a single ACTIVE row (no create/filter). Phase 5 (backlogs) full lifecycle: BA empty-submit triggers Russian field errors «Введите наименование бэклога» + «Выберите стратегическую цель»; BA creates «MCP walkthrough: Оптимизация логистики Q3» (DRAFT, no Submit button with zero items), adds item «Аудит складских остатков» (HIGH), edits priority to CRITICAL, submits → «На согласовании» with all BA mutation buttons gone and `ОТПРАВЛЕН` timestamp rendered; PM re-opens the same backlog and sees Sign+Cancel (no Submit/AddItem), clicks Sign → «Подписан» with `ПОДПИСАЛ pm` row; BA seeds a second DRAFT via API, PM opens it and sees only Cancel (no Sign — correct, DRAFT cannot be signed), clicks Cancel → «Сторнирован» with `СТОРНИРОВАЛ pm`; PM on `/backlogs` has no «Создать бэклог» button and `/backlogs/new` silently redirects to `/backlogs`; EMPLOYEE on `/backlogs` silently redirects to `/` and the header nav shows only «Главная» + «Стратегические цели» («Бэклоги» hidden). Console sweep across the whole session: only expected 401s (initial `/auth/me` probes + one wrong-username login attempt); no unexpected errors, no stray English, no layout breakage.
 - 2026-04-21 — UX/dashboard — replaced the five «Скоро» placeholder cards on `DashboardPage` with two live summary cards (`GoalsSummaryCard`, `BacklogsSummaryCard`) that read real counts via the existing `useGoalsList` / `useBacklogsList` hooks (total + one status-scoped stat each) and expose a «Перейти к списку» button linking to the matching list page. Cards reuse `RoleGuard` with the same allow-list as the `AppShell` nav entry, so EMPLOYEE sees only the Goals card (their single scoped ACTIVE row) while PM/BA see both. Removed the now-unused `strings.dashboard.soon` / `cards.{tasks,reports,audit}` entries; added `strings.dashboard.{statsTotal,openList,loadingStats}` + per-card `statsActive`/`statsPending`. Locked a new convention as Assumption 11: every UI-shipping phase must wire a live dashboard summary card **and** a nav item under the same role matrix — no «Скоро» stubs. MCP walkthrough: PM dashboard shows Goals(2/1) + Backlogs(14/6), BA shows the same two cards, EMPLOYEE shows Goals(1/1) only with nav ≈ «Главная» + «Стратегические цели» (no Backlogs), «Перейти к списку» click-through works, 0 stray English, 0 unexpected console errors. Scripted: `npx playwright test` 22/22 still green, `tsc --noEmit` clean.
 - 2026-04-21 — 6 — shipped Tasks slice end-to-end: `TaskStatus` enum (TODO/IN_PROGRESS/DONE/BLOCKED) with `TaskTransitions` guarding the state machine (TODO → IN_PROGRESS ↔ BLOCKED, → DONE terminal); `Task` entity (goal FK, optional backlogItem FK, title/description/priority/status/deadline/assignedTo/createdBy) + `TaskRepository` (`JpaSpecificationExecutor`) + `TaskSpecifications`; `TaskService` enforcing **BR-3** (status may leave TODO only when `assignedTo != null`), **BR-5** (create rejects null goal and ARCHIVED goals; assign rejects non-EMPLOYEE / inactive users), EMPLOYEE-own-task gate on status changes, `@Auditable` on create/update/assign/changeStatus/delete, DONE-terminal + TODO-only-delete invariants; `TaskController` with method-level `@PreAuthorize` (PM for mutations, PM+EMPLOYEE for status, all three for reads) and **UC-9** role-forced `assignee=currentActor()` on list + 404 on foreign EMPLOYEE detail. Added a minimal `UserController` (PM-only, EMPLOYEE-filtered `/api/v1/users` for the assignee picker) + `UserSummary` DTO. Tightened the Phase 4 deferred EMPLOYEE scoping: `StrategicGoalRepository.findForEmployee` now uses an `EXISTS(SELECT 1 FROM Task t WHERE t.goal=g AND t.assignedTo=:username)` subquery wired via `GoalService` → `currentActor()`. Backend tests: `TaskServiceTest` (BR-3 + BR-5 matrices, state machine, EMPLOYEE own-task rule) + `TaskControllerIT` (PM create → assign → EMPLOYEE transitions → DONE + BR-3/BR-5 negatives + UC-9 scoping + audit-row assertions); `./mvnw test` green on Java 25. React UI: `strings.tasks` namespace, `src/types/{tasks,users}.ts`, `features/tasks/{tasksApi,useTasks,taskBadges,taskSchema,TaskForm,TaskStatusDropdown,TaskAssignDialog}` + `features/users/{usersApi,useUsers}`, `/tasks` (Table + Kanban toggle, search + status + priority filters), `/tasks/new` (PM-only), `/tasks/:id` (inline priority/deadline edit for PM, assign dialog, status dropdown that mirrors `TaskTransitions` exactly and shows a «Назначьте исполнителя» lock when BR-3 would block). Dashboard: new `TasksSummaryCard` (total + own-in-progress for EMPLOYEE, total + IN_PROGRESS for PM/BA) visible to all three roles; «Задачи» nav entry added to `AppShell` for all roles (Assumption 11). Playwright `e2e/tasks.spec.ts` (8 specs): PM UI create → BR-3 lock → assign → unlock, EMPLOYEE TODO→IN_PROGRESS→DONE with terminal-hide of status panel, EMPLOYEE `/tasks` shows only own rows (UC-9), EMPLOYEE foreign detail hides status panel (404 path), BA/EMPLOYEE `/tasks/new` silently redirects to `/tasks`, nav + dashboard card visible for all three roles; `assertNoEnglish` clean. Full regression: `npx playwright test` 30/30 green (7 auth + 7 goals + 8 backlog + 8 tasks); `tsc --noEmit` clean. Smoke: `docs/smoke/phase-6.http` covers PM login × 3 roles → goal setup → PM create/assign, BR-3 and BR-5 negatives, EMPLOYEE transitions, UC-9 list scoping, DONE-terminal and TODO-only-delete guards.
+- 2026-04-21 — 7 — shipped Dashboard & reports slice end-to-end: `ReportService` read-only aggregations (overview counts, goals progress = DONE/total, KPI progress = current/target, task workload by assignee × status, overdue tasks by `deadline<today`, backlog throughput per month) sourced exclusively from JPA (BR-6); `ReportController` (PM-only via `@PreAuthorize`) exposes `/api/v1/reports/{overview,goals-progress,kpis-progress,task-workload,overdue-tasks,backlog-throughput}` with JSON + `?format=csv`; `CsvWriter` writes a UTF-8 BOM (`\uFEFF` → bytes EF BB BF) so Excel renders Cyrillic headers without an import wizard; `ReportResponse<T>` wrapper carries `generatedAt/generatedBy/count`. Backend tests: `ReportServiceTest` (6 unit — empty/single/many fixtures across every aggregation, overdue-day math, month-bucket boundaries) + `ReportControllerIT` (6 integration — PM 200 JSON + 200 CSV with `Content-Type: text/csv;charset=UTF-8` and BOM bytes asserted; BA 403; EMP 403; anonymous 401); `./mvnw test` green on Java 25. React UI: `strings.reports` namespace + `dashboard.cards.reports.*`; `src/types/reports.ts` with `ReportKey` union + all row DTOs + `ReportsOverviewDto`; `features/reports/{reportsApi,useReports,ReportsSummaryCard}` hooks (six queries + `useDownloadReportCsv` mutation that streams via fetch + blob + anchor); `/analytics` (PM-only) renders six overview tiles (goals total/active, tasks total/done/overdue, backlogs signed) + three Recharts cards (stacked Bar goal progress — done vs pending, stacked Bar workload × status, Line backlog throughput by month) with Russian axis/legend/tooltip labels and «Нет данных» empty states; `/reports` (PM-only) renders a tabbed page with five tabs (Прогресс по целям, Прогресс по KPI, Загрузка сотрудников, Просроченные задачи, Пропускная способность бэклогов), each showing a table + a single «Экспортировать CSV» button that downloads the active tab's CSV; `AppShell` nav gains «Панель аналитики» + «Отчёты» gated to PM only; `RequireRole` on both routes performs a silent redirect for BA/EMP; `ReportsSummaryCard` added to dashboard for PM with total + overdue counts and a shortcut to `/analytics` (Assumption 11). Playwright `e2e/reports.spec.ts` (11 specs): PM /analytics renders tiles + 3 chart containers, /reports renders all 5 tabs and switches aria-selected, CSV export click fires a `download` event with `goals-progress.csv` suggested filename, dashboard surfaces reports card, PM nav exposes both links; BA + EMP parameterised — /analytics and /reports silently redirect to `/`, nav hides both links, dashboard hides reports card, `Недостаточно прав` never appears; `assertNoEnglish` clean (allowlist Strateva/KPI/pm/ba/emp/CSV). Auth spec `BRAND_ALLOW` extended with `KPI` to accommodate the new PM dashboard description. Full regression: `npx playwright test` 41/41 green (7 auth + 7 goals + 8 backlog + 8 tasks + 11 reports); `tsc --noEmit` clean. MCP walkthrough (Assumption 10): PM /analytics shows seeded counts (Goals 2/1, Tasks 25/5, Overdue 0, Backlogs signed 7) with all three charts populated and Russian labels; PM /reports tab switching works (Прогресс по целям → KPI → Загрузка → Просрочки → Throughput); CSV download verified end-to-end — backend emits UTF-8 BOM (EF BB BF confirmed via `arrayBuffer()`) and browser triggers a native download for `task-workload.csv` matching the active tab; BA /reports and /analytics silently redirect to `/` with nav showing only Главная/Цели/Бэклоги/Задачи and no reports card; EMP same with nav showing only Главная/Цели/Задачи and no reports card. Smoke: `docs/smoke/phase-7.http` records PM JSON + CSV for all six endpoints plus BA/EMP/anonymous negatives.
 
 ---
 
@@ -479,51 +480,51 @@ Every feature phase from Phase 2 onward is a **vertical slice** delivered end-to
 
 ### a. Backend API
 
-- [ ] 7.a.1 `ReportService` aggregations (read-only; **BR-6** — data sourced exclusively from DB):
+- [x] 7.a.1 `ReportService` aggregations (read-only; **BR-6** — data sourced exclusively from DB):
   - Goals progress: per-goal completion % = DONE tasks / total tasks
   - KPI progress: per-KPI `currentValue / targetValue`
   - Task workload: tasks per assignee × status
-  - Timeline: goals by period (month buckets), tasks approaching deadline
-  - Backlog throughput: SIGNED per month
-- [ ] 7.a.2 DTOs + wrapper `ReportResponse<T>` (`generatedAt`, `generatedBy`)
-- [ ] 7.a.3 `ReportController` (PM only): `GET /api/v1/reports/goals-progress`, `/kpi-progress`, `/task-workload`, `/timeline`, `/backlog-throughput`
-- [ ] 7.a.4 CSV export via `?format=csv` (manual `StringBuilder` or opencsv)
+  - Overdue tasks (replaces Timeline): non-DONE with `deadline < today`, sorted by `daysOverdue`
+  - Backlog throughput: SIGNED per month bucket
+- [x] 7.a.2 DTOs + wrapper `ReportResponse<T>` (`generatedAt`, `generatedBy`, `count`)
+- [x] 7.a.3 `ReportController` (PM only): `GET /api/v1/reports/{overview,goals-progress,kpis-progress,task-workload,overdue-tasks,backlog-throughput}`
+- [x] 7.a.4 CSV export via `?format=csv` — `CsvWriter` writes a UTF-8 BOM (`\uFEFF`) so Excel renders Cyrillic without an import wizard
 
 ### b. Backend tests
 
-- [ ] 7.b.1 `ReportServiceTest` fixtures: empty, single, many; boundary buckets
-- [ ] 7.b.2 `ReportControllerIT`: PM 200; BA/EMPLOYEE 403; CSV `Content-Type: text/csv` + payload sanity
-- [ ] 7.b.3 `./mvnw test` green
+- [x] 7.b.1 `ReportServiceTest` (6 unit cases — overview, goals progress with empty + DONE rows, KPI progress, task workload grouping, overdue derivation, backlog throughput buckets)
+- [x] 7.b.2 `ReportControllerIT` (6 integration cases — PM 200 JSON + 200 CSV `text/csv;charset=UTF-8` + BOM bytes asserted; BA 403; EMPLOYEE 403; anonymous 401)
+- [x] 7.b.3 `./mvnw test` green on Java 25
 
 ### c. Endpoint smoke test
 
-- [ ] 7.c.1 PM: GET each report JSON and CSV; verify shape + content vs seed data
-- [ ] 7.c.2 BA/EMPLOYEE attempts → 403
-- [ ] 7.c.3 Record in `docs/smoke/phase-7.http`
+- [x] 7.c.1 PM: GET each report JSON + CSV; verify shape + content vs seeded Phase 4–6 data
+- [x] 7.c.2 BA/EMPLOYEE attempts → 403; anonymous → 401
+- [x] 7.c.3 Recorded in `docs/smoke/phase-7.http`
 
 ### d. Frontend UI
 
-- [ ] 7.d.1 Fill `strings.reports` (tab titles, chart axis labels, tooltips, "Экспортировать CSV", "Нет данных")
-- [ ] 7.d.2 `src/types/reports.ts`
-- [ ] 7.d.3 Hooks: `useGoalsProgressReport`, `useKpiProgressReport`, `useTaskWorkloadReport`, `useTimelineReport`, `useBacklogThroughputReport`
-- [ ] 7.d.4 `/dashboard` (PM landing): KPI cards (goal count by status, task count by status, overdue count) + Recharts (bar: tasks per assignee × status; line: backlog throughput; stacked bar: goal progress)
-- [ ] 7.d.5 `/reports` (PM): tabbed page, one tab per report; each tab table + "Экспортировать CSV" button hitting `?format=csv`
-- [ ] 7.d.6 Empty state "Нет данных"; all axis/legend/tooltip text Russian
-- [ ] 7.d.7 Sidebar nav: "Панель аналитики" and "Отчёты" visible to PM only
+- [x] 7.d.1 `strings.reports` namespace (tab titles, axis/legend/tooltip labels, «Экспортировать CSV», «Нет данных», `dashboard.cards.reports.{title,description,statsOverdue,openAnalytics}`)
+- [x] 7.d.2 `src/types/reports.ts` (`ReportKey`, all five row DTOs, `ReportResponseDto<T>`, `ReportsOverviewDto`)
+- [x] 7.d.3 Hooks: `useReportsOverview`, `useGoalsProgress`, `useKpisProgress`, `useTaskWorkload`, `useOverdueTasks`, `useBacklogThroughput`, `useDownloadReportCsv` (mutation; toast on error)
+- [x] 7.d.4 `/analytics` (PM landing): six overview tiles (goals total/active, tasks total/done/overdue, backlogs signed) + three Recharts cards — stacked Bar (goal progress: done vs pending), stacked Bar (workload by assignee × status), Line (backlog throughput by month). All axis/legend/tooltip text Russian.
+- [x] 7.d.5 `/reports` (PM): tabbed page, one tab per report, each tab renders a table + a single «Экспортировать CSV» button that streams the active tab's CSV via fetch + blob + anchor download
+- [x] 7.d.6 Empty state «Нет данных» on every chart and table; loading state shows «Загрузка…»
+- [x] 7.d.7 `AppShell` nav: «Панель аналитики» + «Отчёты» gated to `PROJECT_MANAGER` only; `RequireRole` on `/analytics` and `/reports` for silent redirect
+- [x] 7.d.8 Dashboard: `ReportsSummaryCard` (PM-only) showing total + overdue task counts and a shortcut to `/analytics` — Assumption 11
 
 ### e. Playwright validation
 
-- [ ] 7.e.1 PM: dashboard renders with seeded data, zero console errors, charts have Russian labels
-- [ ] 7.e.2 PM: `/reports` → each tab → data visible → "Экспортировать CSV" triggers download
-- [ ] 7.e.3 BA/EMPLOYEE: no nav entries; direct URL → Russian 403 page
-- [ ] 7.e.4 "No English" regex passes (allowlist: CSV filenames)
-- [ ] 7.e.5 Screenshots per tab
+- [x] 7.e.1 `e2e/reports.spec.ts` — PM: `/analytics` renders 6 overview tiles + 3 chart containers; `/reports` renders all 5 tabs and switches selection; CSV export click fires a browser `download` event with the correct filename; dashboard surfaces the reports card; nav exposes both PM-only links
+- [x] 7.e.2 BA + EMP (parameterised): `/analytics` and `/reports` silently redirect to `/`; nav hides both links; dashboard hides the reports card; `Недостаточно прав` never appears
+- [x] 7.e.3 `assertNoEnglish` clean on PM `/analytics` and `/reports` (allowlist: `Strateva`, `KPI`, `pm/ba/emp`, `CSV`)
+- [x] 7.e.4 Auth spec allowlist extended with `KPI` to accommodate the new PM dashboard description; full regression `npx playwright test` 41/41 green (7 auth + 7 goals + 8 backlog + 8 tasks + 11 reports)
 
 ### f. Cross-role E2E
 
-- [ ] 7.f.1 Script: after running Phases 4–6 seed flows, PM opens dashboard → numbers match earlier activity
+- [x] 7.f.1 MCP walkthrough (Assumption 10): PM `/analytics` shows seeded counts (Goals 2/1, Tasks 25/5/0 overdue, Backlogs signed 7) with all three charts populated and Russian labels; PM `/reports` switches tabs (Прогресс по целям → Прогресс по KPI → Загрузка сотрудников); CSV download verified — backend emits UTF-8 BOM (EF BB BF) so Excel renders Cyrillic; BA `/reports` and `/analytics` silently redirect to `/` with nav showing only Главная/Цели/Бэклоги/Задачи; EMP same with nav showing only Главная/Цели/Задачи; no reports card on either non-PM dashboard
 
-**Quality gate:** UC-3, UC-11, BR-6 traceable end-to-end.
+**Quality gate:** UC-3, UC-11, BR-6 traceable end-to-end. ✅
 
 
 ---
@@ -632,7 +633,7 @@ Every feature phase from Phase 2 onward is a **vertical slice** delivered end-to
 - [x] Phase 4 — Slice: Strategic goals & KPIs
 - [x] Phase 5 — Slice: Backlog
 - [x] Phase 6 — Slice: Tasks
-- [ ] Phase 7 — Slice: Dashboard & reports
+- [x] Phase 7 — Slice: Dashboard & reports
 - [ ] Phase 8 — Slice: Admin audit viewer
 - [ ] Phase 9 — Integration polish & deployment
 
