@@ -15,8 +15,8 @@
 
 ## Current state
 
-- **Phase:** 0 — complete (with noted deviations); Phases 1–4 complete
-- **Last completed:** Phase 4 — Strategic goals & KPIs (UC-2, UC-2.1, UC-10, BR-1, BR-4); `./mvnw test` 52/52 green on Java 25; Playwright MCP cross-role flow verified live
+- **Phase:** 0 — complete (with noted deviations); Phases 1–4 complete; cross-cutting silent-authorization pattern adopted
+- **Last completed:** frontend silent-authz refactor + `goals.spec.ts` Playwright coverage; `./mvnw test` 52/52 green on Java 25; `npx playwright test` 14/14 green (7 auth + 7 goals)
 - **Next up:** Phase 5 — Backlog (UC-4, UC-6, UC-7, UC-7.1, UC-7.2, BR-2)
 
 ## Session log
@@ -29,6 +29,7 @@
 - 2026-04-20 — 2/UI — modernized login & dashboard (two-column brand pane, avatar/badge/logo primitives, leading-icon Input, blurred sticky header); Playwright 10/10 desktop+mobile flows green, 0 console errors
 - 2026-04-20 — 3 — shipped `AuditController` (PM-only, filters entityType/entityId/from/to/performedBy, paged); proved `@Auditable` aspect end-to-end via `AuditAspectIT`; folded in the four deferred Phase 2 ITs (`AuthControllerIT`, `SecurityIT`, `AuthAuditIT`); Testcontainers fallback: local Postgres `strateva_test` + `ddl-auto: create-drop` via new `test` profile (Docker unavailable on this host); `./mvnw test` 32/32 green; Playwright authz matrix verified live (401/403/403/200)
 - 2026-04-20 — 4 — shipped Strategic goals & KPIs slice end-to-end: `StrategicGoal`+`Kpi` entities, `GoalService` (BR-1 role gate, BR-4 1–5 KPIs, status machine DRAFT→SUBMITTED→ACTIVE→COMPLETED/ARCHIVED, `@Auditable` on all mutations), `GoalController` with `@PreAuthorize` + EMPLOYEE scoping (UC-10), `BusinessRuleViolationException` → `ApiError` 400; React UI (`/goals` list, `/goals/new`, `/goals/:id`, `/goals/:id/edit`) with `GoalForm` KPI repeater, Zod mirroring BR-4, toast feedback, role-gated action buttons; `AppShell` nav link added; 20 new tests (11 unit + 9 IT) → `./mvnw test` 52/52 green; Playwright MCP drove full cross-role flow: PM create(2 KPIs) → submit → activate → BA read-only → EMPLOYEE sees active → PM archive → EMPLOYEE no longer sees it; `assertNoEnglish` clean; 7/7 regression auth specs still green
+- 2026-04-21 — cross-cutting — silent-authorization pattern adopted: `RoleGuard` defaults to `null` fallback (no more amber «Недостаточно прав» banner); new `RequireRole` performs a silent redirect for route-level guards (`/goals/new`, `/goals/:id/edit` → `/goals`); dropped now-redundant `fallback={null}` on `GoalDetailPage` + `GoalsListPage`; new `e2e/goals.spec.ts` codifies BA/EMPLOYEE silent-hide expectations + PM regression (`npx playwright test` 14/14 green). Convention going forward: `RoleGuard` for inline element gating, `RequireRole` for routes, never show the forbidden string in the UI.
 
 ---
 

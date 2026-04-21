@@ -61,7 +61,7 @@ export function GoalDetailPage() {
               <GoalPriorityBadge priority={data.priority} />
             </div>
           </div>
-          <RoleGuard allow={['PROJECT_MANAGER']} fallback={null}>
+          <RoleGuard allow={['PROJECT_MANAGER']}>
             <div className="flex flex-wrap items-center gap-2" data-testid="goal-actions">
               {canEdit && (
                 <Button variant="secondary" onClick={() => navigate(`/goals/${id}/edit`)} data-testid="action-edit">

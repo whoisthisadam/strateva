@@ -46,7 +46,7 @@ export function GoalsListPage() {
           </h1>
           <p className="text-sm text-slate-500">{strings.goals.subtitle}</p>
         </div>
-        <RoleGuard allow={['PROJECT_MANAGER']} fallback={null}>
+        <RoleGuard allow={['PROJECT_MANAGER']}>
           <Button
             onClick={() => navigate('/goals/new')}
             data-testid="create-goal"

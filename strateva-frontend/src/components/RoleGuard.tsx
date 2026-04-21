@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { useAuth } from '@/auth/useAuth'
 import type { Role } from '@/auth/types'
-import { strings } from '@/lib/strings'
 
 interface RoleGuardProps {
   allow: readonly Role[]
@@ -9,17 +8,15 @@ interface RoleGuardProps {
   children: ReactNode
 }
 
-export function RoleGuard({ allow, fallback, children }: RoleGuardProps) {
+/**
+ * Silent role gate: renders `children` only when the current user's role is
+ * in `allow`. Otherwise renders `fallback` (default `null`) — the element is
+ * omitted from the DOM rather than replaced with an error message. For
+ * route-level redirects use `RequireRole` instead.
+ */
+export function RoleGuard({ allow, fallback = null, children }: RoleGuardProps) {
   const { user } = useAuth()
   if (!user) return null
-  if (!allow.includes(user.role)) {
-    return (
-      fallback ?? (
-        <div className="rounded-md bg-amber-50 p-4 text-sm text-amber-800">
-          {strings.errors.forbidden}
-        </div>
-      )
-    )
-  }
+  if (!allow.includes(user.role)) return <>{fallback}</>
   return <>{children}</>
 }
