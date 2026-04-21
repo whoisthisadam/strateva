@@ -1,0 +1,131 @@
+### Phase 4 — Strategic goals & KPIs smoke tests (UC-2, UC-2.1, UC-10, BR-1, BR-4)
+### Prereqs: backend on http://localhost:8080 with seeded users (pm/ba/emp).
+### Usage (IntelliJ HTTP client or VSCode REST Client): run requests top-to-bottom;
+### variables {{pmToken}}, {{baToken}}, {{empToken}}, {{goalId}} are captured via
+### the response handlers below.
+
+@host = http://localhost:8080
+
+### 1. PM login
+# @name pmLogin
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username": "pm", "password": "pmPass1!"}
+
+> {% client.global.set("pmToken", response.body.token); %}
+
+### 2. BA login
+# @name baLogin
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username": "ba", "password": "baPass1!"}
+
+> {% client.global.set("baToken", response.body.token); %}
+
+### 3. EMPLOYEE login
+# @name empLogin
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username": "emp", "password": "empPass1!"}
+
+> {% client.global.set("empToken", response.body.token); %}
+
+### 4. PM creates a goal with 2 KPIs → 201
+# @name createGoal
+POST {{host}}/api/v1/goals
+Authorization: Bearer {{pmToken}}
+Content-Type: application/json
+
+{
+  "title": "Увеличить выручку на 25%",
+  "description": "Годовой стратегический план 2026",
+  "periodStart": "2026-01-01",
+  "periodEnd": "2026-12-31",
+  "priority": "HIGH",
+  "kpis": [
+    {"name": "Годовая выручка", "targetValue": 25000000, "currentValue": 0, "unit": "руб."},
+    {"name": "ARPU", "targetValue": 5000, "currentValue": 4200, "unit": "руб."}
+  ]
+}
+
+> {% client.global.set("goalId", response.body.id); %}
+
+### 5. PM edits the DRAFT goal → 200
+PATCH {{host}}/api/v1/goals/{{goalId}}
+Authorization: Bearer {{pmToken}}
+Content-Type: application/json
+
+{
+  "title": "Увеличить выручку на 25% (ред.)",
+  "description": "Годовой стратегический план 2026 — уточнённая версия",
+  "periodStart": "2026-01-01",
+  "periodEnd": "2026-12-31",
+  "priority": "CRITICAL",
+  "kpis": [
+    {"name": "Годовая выручка", "targetValue": 25000000, "currentValue": 0, "unit": "руб."},
+    {"name": "ARPU", "targetValue": 5500, "currentValue": 4200, "unit": "руб."}
+  ]
+}
+
+### 6. PM submits for approval (DRAFT → SUBMITTED) → 200
+POST {{host}}/api/v1/goals/{{goalId}}/submit
+Authorization: Bearer {{pmToken}}
+
+### 7. PM activates (SUBMITTED → ACTIVE) → 200
+POST {{host}}/api/v1/goals/{{goalId}}/status
+Authorization: Bearer {{pmToken}}
+Content-Type: application/json
+
+{"status": "ACTIVE"}
+
+### 8. PM lists all goals → 200, page with ≥1 row
+GET {{host}}/api/v1/goals
+Authorization: Bearer {{pmToken}}
+
+### 9. PM reads the goal → 200
+GET {{host}}/api/v1/goals/{{goalId}}
+Authorization: Bearer {{pmToken}}
+
+### 10. EMPLOYEE lists goals → 200, only ACTIVE rows (UC-10)
+GET {{host}}/api/v1/goals
+Authorization: Bearer {{empToken}}
+
+### 11. BA tries to create a goal → 403 (BR-1)
+POST {{host}}/api/v1/goals
+Authorization: Bearer {{baToken}}
+Content-Type: application/json
+
+{
+  "title": "Попытка BA",
+  "periodStart": "2026-01-01",
+  "periodEnd": "2026-06-30",
+  "priority": "LOW",
+  "kpis": [{"name": "k", "targetValue": 1}]
+}
+
+### 12. PM creates a goal without KPIs → 400 BUSINESS_RULE_VIOLATED (BR-4)
+POST {{host}}/api/v1/goals
+Authorization: Bearer {{pmToken}}
+Content-Type: application/json
+
+{
+  "title": "Без KPI",
+  "periodStart": "2026-01-01",
+  "periodEnd": "2026-06-30",
+  "priority": "LOW",
+  "kpis": []
+}
+
+### 13. PM archives the active goal (ACTIVE → ARCHIVED) → 200
+POST {{host}}/api/v1/goals/{{goalId}}/status
+Authorization: Bearer {{pmToken}}
+Content-Type: application/json
+
+{"status": "ARCHIVED"}
+
+### 14. EMPLOYEE lists again → ARCHIVED goal is no longer visible
+GET {{host}}/api/v1/goals
+Authorization: Bearer {{empToken}}

@@ -4,16 +4,18 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { AxiosError } from 'axios'
 import { z } from 'zod'
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  Loader2,
+  Lock,
+  User as UserIcon,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Logo } from '@/components/brand/Logo'
 import { useAuth } from '@/auth/useAuth'
 import { strings } from '@/lib/strings'
 
@@ -58,62 +60,123 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-slate-50 p-6">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>{strings.auth.loginTitle}</CardTitle>
-          <CardDescription>{strings.auth.loginSubtitle}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
-            <div className="space-y-1.5">
-              <Label htmlFor="username">{strings.auth.usernameLabel}</Label>
-              <Input
-                id="username"
-                autoComplete="username"
-                placeholder={strings.auth.usernamePlaceholder}
-                invalid={!!errors.username}
-                {...register('username')}
-              />
-              {errors.username && (
-                <p className="text-xs text-red-600" role="alert">
-                  {errors.username.message}
-                </p>
-              )}
-            </div>
+    <div className="min-h-full bg-app">
+      <div className="mx-auto grid min-h-screen max-w-6xl grid-cols-1 gap-0 p-4 md:p-6 lg:grid-cols-2 lg:gap-10">
+        <aside className="relative hidden overflow-hidden rounded-3xl bg-brand-pane p-10 text-white lg:flex lg:flex-col lg:justify-between">
+          <div className="flex items-center gap-3">
+            <Logo size={40} />
+            <span className="text-xl font-semibold tracking-tight">
+              {strings.app.title}
+            </span>
+          </div>
+          <div className="space-y-6">
+            <h2 className="text-3xl font-semibold leading-tight tracking-tight">
+              {strings.marketing.tagline}
+            </h2>
+            <p className="text-base text-white/80">{strings.marketing.description}</p>
+            <ul className="space-y-3">
+              {strings.marketing.bullets.map((b) => (
+                <li key={b} className="flex items-start gap-3 text-sm text-white/90">
+                  <CheckCircle2
+                    aria-hidden="true"
+                    className="mt-0.5 h-5 w-5 shrink-0 text-brand-200"
+                  />
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p className="text-xs text-white/60">{strings.auth.demoHint}</p>
+        </aside>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="password">{strings.auth.passwordLabel}</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                placeholder={strings.auth.passwordPlaceholder}
-                invalid={!!errors.password}
-                {...register('password')}
-              />
-              {errors.password && (
-                <p className="text-xs text-red-600" role="alert">
-                  {errors.password.message}
-                </p>
-              )}
+        <section className="flex items-center justify-center py-8 lg:py-0">
+          <div className="w-full max-w-md">
+            <div className="mb-8 flex items-center gap-3 lg:hidden">
+              <Logo size={36} />
+              <span className="text-lg font-semibold tracking-tight text-slate-900">
+                {strings.app.title}
+              </span>
             </div>
-
-            {serverError && (
-              <div
-                role="alert"
-                className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"
-              >
-                {serverError}
+            <div className="rounded-2xl border border-slate-200/70 bg-white p-6 shadow-xl shadow-brand-900/5 ring-1 ring-slate-900/[0.02] sm:p-8">
+              <div className="mb-6 space-y-1.5">
+                <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+                  {strings.auth.loginTitle}
+                </h1>
+                <p className="text-sm text-slate-500">{strings.auth.loginSubtitle}</p>
               </div>
-            )}
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? strings.auth.submitting : strings.auth.submit}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
+                <div className="space-y-1.5">
+                  <Label htmlFor="username">{strings.auth.usernameLabel}</Label>
+                  <Input
+                    id="username"
+                    autoComplete="username"
+                    placeholder={strings.auth.usernamePlaceholder}
+                    invalid={!!errors.username}
+                    leadingIcon={<UserIcon className="h-4 w-4" aria-hidden="true" />}
+                    {...register('username')}
+                  />
+                  {errors.username && (
+                    <p className="text-xs text-red-600" role="alert">
+                      {errors.username.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="password">{strings.auth.passwordLabel}</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder={strings.auth.passwordPlaceholder}
+                    invalid={!!errors.password}
+                    leadingIcon={<Lock className="h-4 w-4" aria-hidden="true" />}
+                    {...register('password')}
+                  />
+                  {errors.password && (
+                    <p className="text-xs text-red-600" role="alert">
+                      {errors.password.message}
+                    </p>
+                  )}
+                </div>
+
+                {serverError && (
+                  <div
+                    role="alert"
+                    className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+                  >
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span>{serverError}</span>
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="w-full"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2
+                        className="h-4 w-4 animate-spin"
+                        aria-hidden="true"
+                      />
+                      <span>{strings.auth.submitting}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>{strings.auth.submit}</span>
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </>
+                  )}
+                </Button>
+              </form>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   )
 }

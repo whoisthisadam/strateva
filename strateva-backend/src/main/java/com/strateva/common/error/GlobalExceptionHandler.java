@@ -33,6 +33,12 @@ public class GlobalExceptionHandler {
                 ApiError.of(409, "Conflict", "CONFLICT", ex.getMessage(), req.getRequestURI()));
     }
 
+    @ExceptionHandler(BusinessRuleViolationException.class)
+    public ResponseEntity<ApiError> handleBusinessRule(BusinessRuleViolationException ex, HttpServletRequest req) {
+        return ResponseEntity.badRequest().body(
+                ApiError.of(400, "Bad Request", "BUSINESS_RULE_VIOLATED", ex.getMessage(), req.getRequestURI()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest req) {
         List<ApiError.FieldViolation> violations = ex.getBindingResult().getFieldErrors().stream()

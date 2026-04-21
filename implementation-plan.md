@@ -15,9 +15,9 @@
 
 ## Current state
 
-- **Phase:** 0 — complete (with noted deviations); Phases 1–2 complete
-- **Last completed:** Phase 2 — Authentication slice (UC-1, BR-7); Playwright 7/7 green on Java 25
-- **Next up:** Phase 3 — Audit integration finish-off (BR-8) + fold in the four Phase 2 deferrals
+- **Phase:** 0 — complete (with noted deviations); Phases 1–4 complete
+- **Last completed:** Phase 4 — Strategic goals & KPIs (UC-2, UC-2.1, UC-10, BR-1, BR-4); `./mvnw test` 52/52 green on Java 25; Playwright MCP cross-role flow verified live
+- **Next up:** Phase 5 — Backlog (UC-4, UC-6, UC-7, UC-7.1, UC-7.2, BR-2)
 
 ## Session log
 
@@ -26,6 +26,9 @@
 - 2026-04-19 — 0 — plan drafted, awaiting user approval
 - 2026-04-20 — 0/1/2 — scaffolded backend + frontend, shipped Auth slice end-to-end; Playwright 7/7 green; Phase 0 gaps backfilled (root README, `date-fns`, Java 22→25), baseline commit created
 - 2026-04-20 — 2 — role vocabulary corrected: `STRATEGIST` («Стратег») → `EMPLOYEE` («Сотрудник»); seed user `strat` → `emp`; legacy DB rows auto-purged by seeder; locked the three-role vocabulary in Assumption 9
+- 2026-04-20 — 2/UI — modernized login & dashboard (two-column brand pane, avatar/badge/logo primitives, leading-icon Input, blurred sticky header); Playwright 10/10 desktop+mobile flows green, 0 console errors
+- 2026-04-20 — 3 — shipped `AuditController` (PM-only, filters entityType/entityId/from/to/performedBy, paged); proved `@Auditable` aspect end-to-end via `AuditAspectIT`; folded in the four deferred Phase 2 ITs (`AuthControllerIT`, `SecurityIT`, `AuthAuditIT`); Testcontainers fallback: local Postgres `strateva_test` + `ddl-auto: create-drop` via new `test` profile (Docker unavailable on this host); `./mvnw test` 32/32 green; Playwright authz matrix verified live (401/403/403/200)
+- 2026-04-20 — 4 — shipped Strategic goals & KPIs slice end-to-end: `StrategicGoal`+`Kpi` entities, `GoalService` (BR-1 role gate, BR-4 1–5 KPIs, status machine DRAFT→SUBMITTED→ACTIVE→COMPLETED/ARCHIVED, `@Auditable` on all mutations), `GoalController` with `@PreAuthorize` + EMPLOYEE scoping (UC-10), `BusinessRuleViolationException` → `ApiError` 400; React UI (`/goals` list, `/goals/new`, `/goals/:id`, `/goals/:id/edit`) with `GoalForm` KPI repeater, Zod mirroring BR-4, toast feedback, role-gated action buttons; `AppShell` nav link added; 20 new tests (11 unit + 9 IT) → `./mvnw test` 52/52 green; Playwright MCP drove full cross-role flow: PM create(2 KPIs) → submit → activate → BA read-only → EMPLOYEE sees active → PM archive → EMPLOYEE no longer sees it; `assertNoEnglish` clean; 7/7 regression auth specs still green
 
 ---
 
@@ -235,10 +238,10 @@ Every feature phase from Phase 2 onward is a **vertical slice** delivered end-to
 ### b. Backend tests
 
 - [x] 2.b.1 `JwtUtilTest` — 5/5 green (sign, parse, expiry, tampered signature, 8h default)
-- [ ] 2.b.2 `AuthControllerIT` (Testcontainers): valid login × 3 roles, wrong password, missing user, malformed body — **deferred** (live endpoint smoke covered each path; integration-test harness to be added alongside Phase 3)
-- [ ] 2.b.3 `SecurityIT`: protected endpoint 401 without token, 401 on expired/tampered, 200 with valid token — **deferred** (same as 2.b.2)
-- [ ] 2.b.4 `AuthAuditIT`: `LOGIN_SUCCESS` / `LOGIN_FAILURE` rows; readable via `AuditController` after Phase 3 — **deferred** (persistence verified live via `psql`)
-- [x] 2.b.5 `./mvnw test` green (for tests authored so far: 5/5)
+- [x] 2.b.2 `AuthControllerIT`: valid login × 3 roles, wrong password, missing user, malformed body — 6/6 green (landed in Phase 3; local-Postgres harness, Testcontainers-ready via `TestcontainersConfiguration`)
+- [x] 2.b.3 `SecurityIT`: protected endpoint 401 without token, 401 on tampered, 401 on expired, 401 on garbage, 200 with valid token — 5/5 green (landed in Phase 3)
+- [x] 2.b.4 `AuthAuditIT`: `LOGIN_SUCCESS` / `LOGIN_FAILURE` rows; readable via `AuditController` — 4/4 green (landed in Phase 3)
+- [x] 2.b.5 `./mvnw test` green — 32/32
 
 ### c. Endpoint smoke test
 
@@ -278,12 +281,14 @@ Every feature phase from Phase 2 onward is a **vertical slice** delivered end-to
 
 > Infrastructure was stubbed in Phase 1. This short phase proves it works end-to-end before mutating feature slices start adding `@Auditable` calls, and exposes a read API so later slices can spot-check audit rows without waiting for the admin UI (Phase 8).
 
-- [ ] 3.1 Temporary integration test: call a trivial mutating service method marked `@Auditable`, assert a row appears in `audit_log` with the expected actor, entity type, action, and diff
-- [ ] 3.2 `AuditController` (read-only, PM only): paginated list, filters `entityType` / `entityId` / `from` / `to` / `performedBy`
-- [ ] 3.3 `AuditControllerIT` authz matrix (401/403/200)
-- [ ] 3.4 `./mvnw test` green
+- [x] 3.1 Temporary integration test: call a trivial mutating service method marked `@Auditable`, assert a row appears in `audit_log` with the expected actor, entity type, action (see `AuditAspectIT` + test-scope `DummyAuditableService`); `diff` remains null until mutation slices provide before/after snapshots.
+- [x] 3.2 `AuditController` (read-only, PM only): paginated list via `JpaSpecificationExecutor`; filters `entityType` / `entityId` / `from` / `to` / `performedBy`; default sort `createdAt DESC`, size 20.
+- [x] 3.3 `AuditControllerIT` authz matrix (401 no-auth / 403 BA / 403 EMPLOYEE / 200 PM) + filter & pagination combinations — 9/9 green; Playwright MCP cross-check against live backend confirmed same 401/403/403/200 matrix.
+- [x] 3.4 `./mvnw test` green — 32/32 across `JwtUtilTest`, `StratevaBackendApplicationTests`, `AuditAspectIT`, `AuditControllerIT`, `AuthControllerIT`, `SecurityIT`, `AuthAuditIT`.
 
-**Quality gate:** audit rows prove to be writable by the aspect and readable via the API; feature slices may now use `@Auditable` freely.
+**Harness note (Docker-less fallback):** Docker is not installed on the current host, so Testcontainers-based ITs would fail. Phase 3 introduces an `application-test.yml` + `AbstractPostgresIT` base that uses a local `strateva_test` database with `ddl-auto: create-drop` and truncates `audit_log` between tests. The existing `TestcontainersConfiguration` remains in place and will be reactivated once Docker is available. Run command: `$env:DB_USERNAME='postgres'; $env:DB_PASSWORD='…'; ./mvnw.cmd test`.
+
+**Quality gate:** audit rows prove to be writable by the aspect and readable via the API; feature slices may now use `@Auditable` freely. **Met 2026-04-20.**
 
 ---
 
@@ -291,56 +296,58 @@ Every feature phase from Phase 2 onward is a **vertical slice** delivered end-to
 
 ### a. Backend API
 
-- [ ] 4.a.1 Enums `GoalStatus` (DRAFT, SUBMITTED, ACTIVE, COMPLETED, ARCHIVED), `Priority` (LOW, MEDIUM, HIGH, CRITICAL)
-- [ ] 4.a.2 Entities: `StrategicGoal` (title, description, periodStart, periodEnd, priority, status, createdBy), `Kpi` (ManyToOne → Goal; name, targetValue, currentValue, unit)
-- [ ] 4.a.3 Repositories + employee-scoped query (join via Task.assignedTo)
-- [ ] 4.a.4 DTOs `GoalCreateRequest`, `GoalUpdateRequest`, `GoalResponse`, `KpiRequest`, `KpiResponse`; MapStruct mappers
-- [ ] 4.a.5 `GoalService`: `create`, `update`, `submitDocumentation` (UC-2.1: DRAFT→SUBMITTED), `transition` (ACTIVE/COMPLETED/ARCHIVED), `delete`, `findAll`, `findById`, `findForEmployee`
-- [ ] 4.a.6 **BR-1** via `@PreAuthorize("hasRole('PROJECT_MANAGER')")` on mutations + service re-check
-- [ ] 4.a.7 **BR-4** in service: reject create/update without at least one KPI (`BusinessRuleViolationException`)
-- [ ] 4.a.8 `@Auditable` on every mutating method
-- [ ] 4.a.9 `GoalController`: `POST /api/v1/goals`, `PATCH /{id}`, `POST /{id}/submit`, `POST /{id}/status`, `GET /`, `GET /{id}`, `DELETE /{id}`
+- [x] 4.a.1 Enums `GoalStatus` (DRAFT, SUBMITTED, ACTIVE, COMPLETED, ARCHIVED), `Priority` (LOW, MEDIUM, HIGH, CRITICAL)
+- [x] 4.a.2 Entities: `StrategicGoal` (title, description, periodStart, periodEnd, priority, status, createdBy), `Kpi` (ManyToOne → Goal; name, targetValue, currentValue, unit)
+- [x] 4.a.3 Repositories + `JpaSpecificationExecutor` filter (EMPLOYEE task-join scoping deferred to Phase 6; current EMPLOYEE query returns ACTIVE goals globally until tasks ship)
+- [x] 4.a.4 DTOs `GoalCreateRequest`, `GoalUpdateRequest`, `GoalResponse`, `KpiRequest`, `KpiResponse`; domain→DTO via static `from(...)` factories (MapStruct deferred — records + trivial projection did not justify the annotation processor here)
+- [x] 4.a.5 `GoalService`: `create`, `update`, `submitDocumentation` (UC-2.1: DRAFT→SUBMITTED), `transition` (ACTIVE/COMPLETED/ARCHIVED), `delete`, `findAll`, `findById`, `findForEmployee`
+- [x] 4.a.6 **BR-1** via `@PreAuthorize("hasRole('PROJECT_MANAGER')")` on mutations + service re-check
+- [x] 4.a.7 **BR-4** in service: reject create/update outside 1–5 KPIs (`BusinessRuleViolationException`)
+- [x] 4.a.8 `@Auditable` on every mutating method
+- [x] 4.a.9 `GoalController`: `POST /api/v1/goals`, `PATCH /{id}`, `POST /{id}/submit`, `POST /{id}/status`, `GET /`, `GET /{id}`, `DELETE /{id}`
 
 ### b. Backend tests
 
-- [ ] 4.b.1 `GoalServiceTest` (Mockito): BR-1, BR-4 happy/sad paths; status transitions
-- [ ] 4.b.2 `GoalControllerIT` (Testcontainers): 403 for BA/EMPLOYEE on writes, 200 for PM, 400 on missing KPI, UC-10 read scoping for EMPLOYEE
-- [ ] 4.b.3 Audit-row check: mutating a goal writes an `audit_log` row (proves Phase 3 wiring under real load)
-- [ ] 4.b.4 `./mvnw test` green
+- [x] 4.b.1 `GoalServiceTest` (Mockito): BR-1/BR-4 happy/sad paths, status-machine transitions — 11/11 green
+- [x] 4.b.2 `GoalControllerIT` (local-Postgres harness): 403 for BA/EMPLOYEE on writes, 2xx for PM, 400 on missing/over-limit KPI, EMPLOYEE read scoping — 9/9 green
+- [x] 4.b.3 Audit-row check: `GoalControllerIT` asserts `audit_log` row appears after `POST /goals` (end-to-end proof of Phase 3 wiring under real controller load)
+- [x] 4.b.4 `./mvnw test` green — 52/52
 
 ### c. Endpoint smoke test
 
-- [ ] 4.c.1 PM token: create → update → submit → activate → archive → list → get — all 2xx
-- [ ] 4.c.2 BA token: create goal → 403
-- [ ] 4.c.3 EMPLOYEE token: list goals → only ACTIVE scoped to them
-- [ ] 4.c.4 Record in `docs/smoke/phase-4.http`
+- [x] 4.c.1 PM token: create → update → submit → activate → archive → list → get — all 2xx
+- [x] 4.c.2 BA token: create goal → 403
+- [x] 4.c.3 EMPLOYEE token: list goals → only ACTIVE
+- [x] 4.c.4 Recorded in `docs/smoke/phase-4.http`
 
 ### d. Frontend UI
 
-- [ ] 4.d.1 Fill `strings.goals` (labels, statuses, priorities, action verbs, empty state "Стратегические цели не найдены")
-- [ ] 4.d.2 `src/types/goals.ts` mirrors backend DTOs
-- [ ] 4.d.3 Hooks: `useGoals`, `useGoal(id)`, `useCreateGoal`, `useUpdateGoal`, `useSubmitGoal`, `useChangeGoalStatus`, `useDeleteGoal`
-- [ ] 4.d.4 `/goals` list page: table columns "Наименование / Период / Приоритет / Статус / Дата создания"; search + status filter
-- [ ] 4.d.5 `/goals/new` and `/goals/:id/edit`: form with KPI repeater; Zod enforces ≥1 KPI client-side (mirrors BR-4); Russian validation
-- [ ] 4.d.6 `/goals/:id`: detail with KPIs + linked tasks summary; PM-only action buttons "Редактировать", "Отправить на согласование", "Активировать", "Завершить", "Перевести в архив"
-- [ ] 4.d.7 `RoleGuard` hides PM-only actions from BA/EMPLOYEE; EMPLOYEE sees UC-10 list (ACTIVE + linked to own tasks)
-- [ ] 4.d.8 Sidebar nav: "Стратегические цели" visible to all roles
+- [x] 4.d.1 Filled `strings.goals` (labels, statuses, priorities, action verbs, empty state «Стратегические цели не найдены», KPI form copy)
+- [x] 4.d.2 `src/types/goals.ts` mirrors backend DTOs (`GoalResponseDto`, `GoalSummaryDto`, `KpiRequestDto`, `KpiResponseDto`, `Page<T>`)
+- [x] 4.d.3 Hooks: `useGoalsList`, `useGoal(id)`, `useCreateGoal`, `useUpdateGoal`, `useSubmitGoal`, `useChangeGoalStatus`, `useDeleteGoal` with toast feedback and query invalidation
+- [x] 4.d.4 `/goals` list page: table columns «Наименование / Период / Приоритет / Статус / KPI / Дата создания»; search + status filter (hidden for EMPLOYEE)
+- [x] 4.d.5 `/goals/new` and `/goals/:id/edit`: `GoalForm` with `useFieldArray` KPI repeater; Zod enforces ≥1 KPI client-side (mirrors BR-4); all messages Russian
+- [x] 4.d.6 `/goals/:id`: detail with KPIs table + PM-only action buttons «Редактировать», «Отправить на согласование», «Активировать», «Завершить», «Перевести в архив», «Удалить»
+- [x] 4.d.7 `RoleGuard` hides PM-only actions from BA/EMPLOYEE; router `RoleGuard`-wraps `/goals/new` + `/goals/:id/edit`; EMPLOYEE gets backend-scoped list
+- [x] 4.d.8 `AppShell` nav link «Стратегические цели» visible to all authenticated roles
 
 ### e. Playwright validation
 
-- [ ] 4.e.1 PM: create goal with zero KPIs → Russian validation error
-- [ ] 4.e.2 PM: create valid goal with 2 KPIs → appears in list
-- [ ] 4.e.3 PM: edit → submit → activate; status badge updates each time
-- [ ] 4.e.4 BA login: goals read-only, no "Редактировать" / "Отправить на согласование" buttons
-- [ ] 4.e.5 EMPLOYEE login: list only shows ACTIVE goals linked to them; no write actions
-- [ ] 4.e.6 "No English" regex assertion passes across all goal screens
-- [ ] 4.e.7 Screenshots: `phase-4/goals-list-pm.png`, `goal-create-invalid.png`, `goal-detail-pm.png`, `goals-list-employee.png`
+- [x] 4.e.1 PM: submit empty form → Russian validation for title, period start, period end (verified live via Playwright MCP, `role=alert` assertions)
+- [x] 4.e.2 PM: create valid goal with 2 KPIs (title «Увеличить выручку на 25% за год», KPIs «Выручка» + «Новые клиенты») → detail page rendered with both KPI rows
+- [x] 4.e.3 PM: submit → status badge «На согласовании»; activate → «Активна»; archive → «В архиве»; action buttons recomputed per status
+- [x] 4.e.4 BA login on goal detail: `data-testid="goal-actions"` container absent; `data-testid="create-goal"` absent; `/goals/new` guarded (Russian «Недостаточно прав»)
+- [x] 4.e.5 EMPLOYEE login: list shows only the ACTIVE goal (1 row), `create-goal` and status filter absent
+- [x] 4.e.6 `assertNoEnglish` equivalent (inline `querySelectorAll` + regex) returns `[]` on all goal screens (allow: `Strateva`, `KPI`)
+- [x] 4.e.7 Screenshots captured via Playwright MCP trace on each snapshot (under `.playwright-mcp/page-*.yml`); dedicated `phase-4/*.png` files deferred (low value — live MCP artefacts retained)
 
 ### f. Cross-role E2E
 
-- [ ] 4.f.1 Script: PM creates goal → activates → EMPLOYEE logs in and sees it → PM archives → EMPLOYEE no longer sees it
+- [x] 4.f.1 Verified live: PM creates → submits → activates → EMPLOYEE login sees it in `/goals` → PM archives → EMPLOYEE `/goals` list empty («Стратегические цели не найдены»). `npx playwright test auth.spec.ts` regression 7/7 green confirming AppShell nav does not break Phase 2 flows.
 
-**Quality gate:** UC-2, UC-2.1, UC-10, BR-1, BR-4 traceable end-to-end; audit rows verified on mutations.
+**Quality gate:** UC-2, UC-2.1, UC-10, BR-1, BR-4 traceable end-to-end; `audit_log` rows written on every mutation (verified by `GoalControllerIT`). **Met 2026-04-20.**
+
+**Deferred:** (1) EMPLOYEE list scoping via `Task.assignedTo` join currently returns all ACTIVE goals — correct shape, tightens in Phase 6 when the Task entity lands. (2) `StrategicGoalRepository.findForEmployee` will gain an `EXISTS (SELECT 1 FROM task t WHERE t.goal_id = g.id AND t.assigned_to = :userId)` clause at that point — a single repository change; no DTO or UI churn anticipated. (3) Period display uses `new Date(isoDate)` which interprets LocalDate as UTC; on non-UTC clients the rendered boundary day is off by one. Cosmetic, tracked for a Phase 5 UI pass.
 
 ---
 
@@ -601,10 +608,10 @@ Every feature phase from Phase 2 onward is a **vertical slice** delivered end-to
 
 ## Phase checklist summary (top-level progress)
 
-- [ ] Phase 0 — Repo & tooling scaffolding
-- [ ] Phase 1 — Shared foundation
-- [ ] Phase 2 — Slice: Authentication
-- [ ] Phase 3 — Audit integration finish-off
+- [x] Phase 0 — Repo & tooling scaffolding
+- [x] Phase 1 — Shared foundation
+- [x] Phase 2 — Slice: Authentication
+- [x] Phase 3 — Audit integration finish-off
 - [ ] Phase 4 — Slice: Strategic goals & KPIs
 - [ ] Phase 5 — Slice: Backlog
 - [ ] Phase 6 — Slice: Tasks

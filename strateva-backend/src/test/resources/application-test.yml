@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5432/strateva_test}
+    username: ${TEST_DB_USERNAME:${DB_USERNAME:postgres}}
+    password: ${TEST_DB_PASSWORD:${DB_PASSWORD:postgres}}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+  flyway:
+    enabled: false
+
+strateva:
+  security:
+    jwt:
+      secret: test-secret-key-that-is-at-least-32-bytes-long-xxxxxxx
+      expiration-ms: 28800000
+      issuer: strateva
+
+logging:
+  level:
+    root: WARN
+    com.strateva: INFO
+    org.hibernate.SQL: WARN
