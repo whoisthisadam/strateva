@@ -16,6 +16,8 @@ import { TaskCreatePage } from '@/pages/TaskCreatePage'
 import { TaskDetailPage } from '@/pages/TaskDetailPage'
 import { AnalyticsPage } from '@/pages/AnalyticsPage'
 import { ReportsPage } from '@/pages/ReportsPage'
+import { AuditLogPage } from '@/pages/AuditLogPage'
+import { UsersListPage } from '@/pages/UsersListPage'
 
 export const router = createBrowserRouter([
   {
@@ -96,6 +98,22 @@ export const router = createBrowserRouter([
         element: (
           <RequireRole allow={['PROJECT_MANAGER']}>
             <ReportsPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: 'admin/audit',
+        element: (
+          <RequireRole allow={['PROJECT_MANAGER']}>
+            <AuditLogPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: 'admin/users',
+        element: (
+          <RequireRole allow={['PROJECT_MANAGER']}>
+            <UsersListPage />
           </RequireRole>
         ),
       },

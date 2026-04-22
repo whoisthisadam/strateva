@@ -25,6 +25,7 @@ export const strings = {
     analytics: 'Панель аналитики',
     reports: 'Отчёты',
     audit: 'Журнал аудита',
+    users: 'Пользователи',
     logout: 'Выйти',
   },
   auth: {
@@ -87,6 +88,12 @@ export const strings = {
         description: 'Аналитические сводки по целям, KPI и задачам',
         statsOverdue: 'Просрочено задач',
         openAnalytics: 'Открыть аналитику',
+      },
+      audit: {
+        title: 'Журнал аудита',
+        description: 'История изменений и действий пользователей',
+        statsToday: 'За последние 24 ч.',
+        openAudit: 'Открыть журнал',
       },
     },
   },
@@ -437,6 +444,75 @@ export const strings = {
     },
     toast: {
       exportFailed: 'Не удалось сформировать CSV',
+    },
+  },
+  admin: {
+    audit: {
+      title: 'Журнал аудита',
+      subtitle: 'История мутаций доменных сущностей и событий входа',
+      empty: 'Записи журнала не найдены',
+      emptyHint: 'Измените фильтры или выполните действие в системе',
+      filters: {
+        entityType: 'Тип объекта',
+        entityTypePlaceholder: 'Например, Goal',
+        entityTypeAll: 'Все типы',
+        entityId: 'Идентификатор',
+        entityIdPlaceholder: 'UUID или строковый ключ',
+        performedBy: 'Автор',
+        performedByAll: 'Все пользователи',
+        from: 'Дата от',
+        to: 'Дата до',
+        pageSize: 'Строк на странице',
+        reset: 'Сбросить фильтры',
+        apply: 'Применить',
+      },
+      columns: {
+        createdAt: 'Дата и время',
+        actor: 'Автор',
+        action: 'Действие',
+        entityType: 'Тип объекта',
+        entityId: 'Идентификатор',
+        message: 'Сообщение',
+        details: 'Детали',
+      },
+      action: {
+        CREATE: 'Создание',
+        UPDATE: 'Обновление',
+        DELETE: 'Удаление',
+        LOGIN_SUCCESS: 'Успешный вход',
+        LOGIN_FAILURE: 'Ошибка входа',
+      },
+      details: {
+        title: 'Детали изменения',
+        none: 'Нет детальной информации об изменении',
+        messageLabel: 'Сообщение',
+        diffLabel: 'Данные изменения',
+      },
+      pagination: {
+        prev: 'Назад',
+        next: 'Вперёд',
+        status: 'Страница {page} из {total}',
+      },
+      toast: {
+        loadFailed: 'Не удалось загрузить журнал аудита',
+      },
+    },
+    users: {
+      title: 'Пользователи',
+      subtitle: 'Список активных учётных записей и назначенных ролей',
+      empty: 'Пользователи не найдены',
+      columns: {
+        fullName: 'Полное имя',
+        username: 'Логин',
+        role: 'Роль',
+      },
+      filters: {
+        role: 'Роль',
+        roleAll: 'Все роли',
+      },
+      toast: {
+        loadFailed: 'Не удалось загрузить список пользователей',
+      },
     },
   },
 } as const

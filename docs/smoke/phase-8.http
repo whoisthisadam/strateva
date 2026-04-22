@@ -1,0 +1,99 @@
+### Phase 8 — Admin: audit viewer & user list smoke tests (BR-8, PM-only)
+### Prereqs: backend on http://localhost:8080 with seeded users (pm/ba/emp).
+### Run top-to-bottom in IntelliJ or VSCode REST Client; tokens are captured via response handlers.
+
+@host = http://localhost:8080
+
+### 1. PM login
+# @name pmLogin
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username": "pm", "password": "pmPass1!"}
+
+> {% client.global.set("pmToken", response.body.token); %}
+
+### 2. BA login
+# @name baLogin
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username": "ba", "password": "baPass1!"}
+
+> {% client.global.set("baToken", response.body.token); %}
+
+### 3. EMPLOYEE login
+# @name empLogin
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username": "emp", "password": "empPass1!"}
+
+> {% client.global.set("empToken", response.body.token); %}
+
+### 4. PM — audit log: full list (paged, default size 20, sorted createdAt DESC) → 200
+GET {{host}}/api/v1/audit
+Authorization: Bearer {{pmToken}}
+
+### 5. PM — audit log: filter by entityType=Goal → 200, only Goal rows
+GET {{host}}/api/v1/audit?entityType=Goal
+Authorization: Bearer {{pmToken}}
+
+### 6. PM — audit log: filter by performedBy=pm → 200, only pm-authored rows
+GET {{host}}/api/v1/audit?performedBy=pm
+Authorization: Bearer {{pmToken}}
+
+### 7. PM — audit log: filter by entityId (takes id from a row above) → 200
+### Replace {id} manually with an entity_id from step 5/6 response.
+GET {{host}}/api/v1/audit?entityId={id}
+Authorization: Bearer {{pmToken}}
+
+### 8. PM — audit log: time-range filter (last 24h) → 200
+GET {{host}}/api/v1/audit?from=2026-04-21T00:00:00Z&to=2026-04-23T23:59:59Z
+Authorization: Bearer {{pmToken}}
+
+### 9. PM — audit log: pagination page=0&size=5 → 200, content.length ≤ 5
+GET {{host}}/api/v1/audit?page=0&size=5
+Authorization: Bearer {{pmToken}}
+
+### 10. PM — audit log: combined filter entityType=Goal & performedBy=pm → 200
+GET {{host}}/api/v1/audit?entityType=Goal&performedBy=pm
+Authorization: Bearer {{pmToken}}
+
+### 11. BA — audit log: blocked by @PreAuthorize → 403
+GET {{host}}/api/v1/audit
+Authorization: Bearer {{baToken}}
+
+### 12. EMPLOYEE — audit log: blocked by @PreAuthorize → 403
+GET {{host}}/api/v1/audit
+Authorization: Bearer {{empToken}}
+
+### 13. Anonymous — audit log: no bearer → 401
+GET {{host}}/api/v1/audit
+
+### 14. PM — user list: all active users (3 seeded) → 200
+GET {{host}}/api/v1/users
+Authorization: Bearer {{pmToken}}
+
+### 15. PM — user list filtered by role EMPLOYEE → 200, 1 row (emp)
+GET {{host}}/api/v1/users?role=EMPLOYEE
+Authorization: Bearer {{pmToken}}
+
+### 16. PM — user list filtered by role BUSINESS_ANALYST → 200, 1 row (ba)
+GET {{host}}/api/v1/users?role=BUSINESS_ANALYST
+Authorization: Bearer {{pmToken}}
+
+### 17. PM — user list filtered by role PROJECT_MANAGER → 200, 1 row (pm)
+GET {{host}}/api/v1/users?role=PROJECT_MANAGER
+Authorization: Bearer {{pmToken}}
+
+### 18. BA — user list: blocked by @PreAuthorize → 403
+GET {{host}}/api/v1/users
+Authorization: Bearer {{baToken}}
+
+### 19. EMPLOYEE — user list: blocked by @PreAuthorize → 403
+GET {{host}}/api/v1/users
+Authorization: Bearer {{empToken}}
+
+### 20. Anonymous — user list: no bearer → 401
+GET {{host}}/api/v1/users

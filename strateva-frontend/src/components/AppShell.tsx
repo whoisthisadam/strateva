@@ -37,6 +37,18 @@ const NAV_ITEMS: readonly NavItem[] = [
     end: false,
     allow: ['PROJECT_MANAGER'],
   },
+  {
+    to: '/admin/audit',
+    label: strings.nav.audit,
+    end: false,
+    allow: ['PROJECT_MANAGER'],
+  },
+  {
+    to: '/admin/users',
+    label: strings.nav.users,
+    end: false,
+    allow: ['PROJECT_MANAGER'],
+  },
 ]
 
 export function AppShell() {
