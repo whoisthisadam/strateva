@@ -2,8 +2,10 @@ import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 
 const TOKEN_STORAGE_KEY = 'strateva.token'
 
+const apiOrigin = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
+
 export const http = axios.create({
-  baseURL: '/api',
+  baseURL: `${apiOrigin}/api`,
   headers: {
     'Content-Type': 'application/json',
   },

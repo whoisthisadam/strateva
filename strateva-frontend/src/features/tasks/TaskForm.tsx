@@ -127,11 +127,13 @@ function EditForm({ defaultValues, submitting, onSubmit, onCancel, t }: EditProp
       deadline: v.deadline && v.deadline.length > 0 ? v.deadline : null,
     })
   })
+  const r = register as unknown as AnyRegister
+  const e = errors as unknown as AnyErrors
   return (
     <form className="space-y-5" onSubmit={submit} noValidate data-testid="task-form">
-      <TitleField register={register} errors={errors} t={t} />
-      <DescriptionField register={register} errors={errors} t={t} />
-      <PriorityDeadlineRow register={register} errors={errors} t={t} />
+      <TitleField register={r} errors={e} t={t} />
+      <DescriptionField register={r} errors={e} t={t} />
+      <PriorityDeadlineRow register={r} errors={e} t={t} />
       <FormActions submitting={submitting} onCancel={onCancel} label={t.submitUpdate} t={t} />
     </form>
   )

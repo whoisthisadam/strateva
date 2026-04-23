@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { useAuditLog } from '@/features/admin/useAdmin'
 import { useUsersList } from '@/features/users/useUsers'
-import { AUDIT_ACTIONS, type AuditAction, type AuditLogFilters } from '@/types/admin'
+import { type AuditAction, type AuditLogFilters } from '@/types/admin'
 import { cn } from '@/lib/cn'
 import { strings } from '@/lib/strings'
 
