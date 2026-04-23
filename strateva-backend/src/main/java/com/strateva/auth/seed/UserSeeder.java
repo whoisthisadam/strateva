@@ -36,12 +36,7 @@ public class UserSeeder {
                                        PasswordEncoder encoder,
                                        TransactionTemplate tx,
                                        JdbcTemplate jdbc) {
-        return args -> tx.executeWithoutResult(status -> {
-            int purged = jdbc.update(
-                    "DELETE FROM users WHERE role = 'STRATEGIST' OR username = 'strat'");
-            if (purged > 0) {
-                log.info("Purged {} legacy STRATEGIST/'strat' user row(s)", purged);
-            }
+        return _ -> tx.executeWithoutResult(_ -> {
             // Hibernate's ddl-auto: update does not rewrite enum CHECK constraints
             // when enum values change; refresh it to the current Role vocabulary.
             jdbc.execute("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check");
