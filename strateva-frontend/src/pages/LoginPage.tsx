@@ -8,6 +8,8 @@ import {
   AlertCircle,
   ArrowRight,
   CheckCircle2,
+  Eye,
+  EyeOff,
   Loader2,
   Lock,
   User as UserIcon,
@@ -31,6 +33,12 @@ export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation() as { state?: { from?: string } }
   const [serverError, setServerError] = useState<string | null>(null)
+
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleToggle = () => {
+    setShowPassword(!showPassword)
+  }
 
   const {
     register,
@@ -125,15 +133,29 @@ export function LoginPage() {
 
                 <div className="space-y-1.5">
                   <Label htmlFor="password">{strings.auth.passwordLabel}</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    autoComplete="current-password"
-                    placeholder={strings.auth.passwordPlaceholder}
-                    invalid={!!errors.password}
-                    leadingIcon={<Lock className="h-4 w-4" aria-hidden="true" />}
-                    {...register('password')}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      placeholder={strings.auth.passwordPlaceholder}
+                      invalid={!!errors.password}
+                      leadingIcon={<Lock className="h-4 w-4" aria-hidden="true"/>}
+                      {...register('password')}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleToggle}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? (
+                        <Eye className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <EyeOff className="h-4 w-4" aria-hidden="true" />
+                      )}
+                    </button>
+                  </div>
                   {errors.password && (
                     <p className="text-xs text-red-600" role="alert">
                       {errors.password.message}
