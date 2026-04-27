@@ -61,7 +61,7 @@ public class SampleDataSeeder {
 
             StrategicGoal g3 = goal(goalRepo, "Повышение удовлетворённости клиентов",
                     "Улучшить NPS и сократить время реакции службы поддержки.",
-                    today.minusDays(15), today.plusMonths(12), Priority.CRITICAL, GoalStatus.SUBMITTED,
+                    today.minusDays(15), today.plusMonths(12), Priority.CRITICAL, GoalStatus.DRAFT,
                     new Kpi("Индекс NPS", bd("60"), bd("42"), "балл"),
                     new Kpi("Время ответа, ч", bd("4"), bd("9.3"), "ч"));
 

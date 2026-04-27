@@ -7,10 +7,11 @@ import { Card, CardContent } from '@/components/ui/card'
 import { RoleGuard } from '@/components/RoleGuard'
 import { GoalPriorityBadge, GoalStatusBadge } from '@/features/goals/goalBadges'
 import {
-  useChangeGoalStatus,
+  useActivateGoal,
+  useArchiveGoal,
+  useCompleteGoal,
   useDeleteGoal,
   useGoal,
-  useSubmitGoal,
 } from '@/features/goals/useGoals'
 import { strings } from '@/lib/strings'
 
@@ -27,18 +28,19 @@ export function GoalDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data, isLoading, isError } = useGoal(id)
-  const submitMutation = useSubmitGoal()
-  const statusMutation = useChangeGoalStatus()
+  const activateMutation = useActivateGoal()
+  const completeMutation = useCompleteGoal()
+  const archiveMutation = useArchiveGoal()
   const deleteMutation = useDeleteGoal()
 
   if (isLoading) return <p className="text-sm text-slate-500">{strings.app.loading}</p>
   if (isError || !data) return <p className="text-sm text-red-600">{strings.errors.unknown}</p>
 
-  const canEdit = data.status === 'DRAFT' || data.status === 'SUBMITTED'
-  const canSubmit = data.status === 'DRAFT'
-  const canActivate = data.status === 'SUBMITTED'
+  const canEdit = data.status === 'DRAFT'
+  const canActivate = data.status === 'DRAFT'
   const canComplete = data.status === 'ACTIVE'
-  const canArchive = data.status === 'ACTIVE' || data.status === 'COMPLETED'
+  const canArchive =
+    data.status === 'DRAFT' || data.status === 'ACTIVE' || data.status === 'COMPLETED'
   const canDelete = data.status === 'DRAFT'
 
   return (
@@ -68,14 +70,9 @@ export function GoalDetailPage() {
                   {strings.goals.actions.edit}
                 </Button>
               )}
-              {canSubmit && (
-                <Button onClick={() => id && submitMutation.mutate(id)} data-testid="action-submit">
-                  {strings.goals.actions.submitForApproval}
-                </Button>
-              )}
               {canActivate && (
                 <Button
-                  onClick={() => id && statusMutation.mutate({ id, status: 'ACTIVE' })}
+                  onClick={() => id && activateMutation.mutate(id)}
                   data-testid="action-activate"
                 >
                   {strings.goals.actions.activate}
@@ -84,7 +81,7 @@ export function GoalDetailPage() {
               {canComplete && (
                 <Button
                   variant="secondary"
-                  onClick={() => id && statusMutation.mutate({ id, status: 'COMPLETED' })}
+                  onClick={() => id && completeMutation.mutate(id)}
                   data-testid="action-complete"
                 >
                   {strings.goals.actions.complete}
@@ -93,7 +90,7 @@ export function GoalDetailPage() {
               {canArchive && (
                 <Button
                   variant="secondary"
-                  onClick={() => id && statusMutation.mutate({ id, status: 'ARCHIVED' })}
+                  onClick={() => id && archiveMutation.mutate(id)}
                   data-testid="action-archive"
                 >
                   {strings.goals.actions.archive}

@@ -3,7 +3,6 @@ import type {
   GoalFormValues,
   GoalListFilters,
   GoalResponseDto,
-  GoalStatus,
   GoalSummaryDto,
   Page,
 } from '@/types/goals'
@@ -34,13 +33,18 @@ export async function updateGoal(id: string, values: GoalFormValues): Promise<Go
   return data
 }
 
-export async function submitGoal(id: string): Promise<GoalResponseDto> {
-  const { data } = await http.post<GoalResponseDto>(`/v1/goals/${id}/submit`)
+export async function activateGoal(id: string): Promise<GoalResponseDto> {
+  const { data } = await http.post<GoalResponseDto>(`/v1/goals/${id}/activate`)
   return data
 }
 
-export async function changeGoalStatus(id: string, status: GoalStatus): Promise<GoalResponseDto> {
-  const { data } = await http.post<GoalResponseDto>(`/v1/goals/${id}/status`, { status })
+export async function completeGoal(id: string): Promise<GoalResponseDto> {
+  const { data } = await http.post<GoalResponseDto>(`/v1/goals/${id}/complete`)
+  return data
+}
+
+export async function archiveGoal(id: string): Promise<GoalResponseDto> {
+  const { data } = await http.post<GoalResponseDto>(`/v1/goals/${id}/archive`)
   return data
 }
 

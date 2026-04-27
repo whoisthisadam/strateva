@@ -1,6 +1,7 @@
 package com.strateva.goal.service;
 
 import com.strateva.common.error.BusinessRuleViolationException;
+import com.strateva.common.error.InvalidStatusTransitionException;
 import com.strateva.common.error.NotFoundException;
 import com.strateva.goal.domain.GoalStatus;
 import com.strateva.goal.domain.Priority;
@@ -103,47 +104,76 @@ class GoalServiceTest {
     }
 
     @Test
-    void submit_fromDraft_moves_toSubmitted() throws Exception {
+    void activate_fromDraft_moves_toActive() throws Exception {
         StrategicGoal goal = persisted(GoalStatus.DRAFT);
         UUID id = goal.getId();
         when(repository.findWithKpisById(id)).thenReturn(Optional.of(goal));
 
-        var response = service.submitDocumentation(id);
-        assertThat(response.status()).isEqualTo(GoalStatus.SUBMITTED);
+        assertThat(service.activate(id).status()).isEqualTo(GoalStatus.ACTIVE);
     }
 
     @Test
-    void submit_fromActive_isRejected() throws Exception {
-        StrategicGoal goal = persisted(GoalStatus.ACTIVE);
+    void activate_fromCompleted_isRejected() throws Exception {
+        StrategicGoal goal = persisted(GoalStatus.COMPLETED);
         UUID id = goal.getId();
         when(repository.findWithKpisById(id)).thenReturn(Optional.of(goal));
-        assertThatThrownBy(() -> service.submitDocumentation(id))
-                .isInstanceOf(BusinessRuleViolationException.class);
-    }
-
-    @Test
-    void transition_legalPath_submittedToActiveToArchived() throws Exception {
-        StrategicGoal goal = persisted(GoalStatus.SUBMITTED);
-        UUID id = goal.getId();
-        when(repository.findWithKpisById(id)).thenReturn(Optional.of(goal));
-
-        assertThat(service.transition(id, GoalStatus.ACTIVE).status()).isEqualTo(GoalStatus.ACTIVE);
-        assertThat(service.transition(id, GoalStatus.ARCHIVED).status()).isEqualTo(GoalStatus.ARCHIVED);
-    }
-
-    @Test
-    void transition_illegalDraftToActive_isRejected() throws Exception {
-        StrategicGoal goal = persisted(GoalStatus.DRAFT);
-        UUID id = goal.getId();
-        when(repository.findWithKpisById(id)).thenReturn(Optional.of(goal));
-        assertThatThrownBy(() -> service.transition(id, GoalStatus.ACTIVE))
-                .isInstanceOf(BusinessRuleViolationException.class)
+        assertThatThrownBy(() -> service.activate(id))
+                .isInstanceOf(InvalidStatusTransitionException.class)
                 .hasMessageContaining("Недопустимый переход");
     }
 
     @Test
+    void complete_fromActive_moves_toCompleted() throws Exception {
+        StrategicGoal goal = persisted(GoalStatus.ACTIVE);
+        UUID id = goal.getId();
+        when(repository.findWithKpisById(id)).thenReturn(Optional.of(goal));
+
+        assertThat(service.complete(id).status()).isEqualTo(GoalStatus.COMPLETED);
+    }
+
+    @Test
+    void complete_fromDraft_isRejected() throws Exception {
+        StrategicGoal goal = persisted(GoalStatus.DRAFT);
+        UUID id = goal.getId();
+        when(repository.findWithKpisById(id)).thenReturn(Optional.of(goal));
+        assertThatThrownBy(() -> service.complete(id))
+                .isInstanceOf(InvalidStatusTransitionException.class);
+    }
+
+    @Test
+    void archive_fromDraft_moves_toArchived() throws Exception {
+        assertArchiveSucceedsFrom(GoalStatus.DRAFT);
+    }
+
+    @Test
+    void archive_fromActive_moves_toArchived() throws Exception {
+        assertArchiveSucceedsFrom(GoalStatus.ACTIVE);
+    }
+
+    @Test
+    void archive_fromCompleted_moves_toArchived() throws Exception {
+        assertArchiveSucceedsFrom(GoalStatus.COMPLETED);
+    }
+
+    @Test
+    void archive_fromArchived_isRejected() throws Exception {
+        StrategicGoal goal = persisted(GoalStatus.ARCHIVED);
+        UUID id = goal.getId();
+        when(repository.findWithKpisById(id)).thenReturn(Optional.of(goal));
+        assertThatThrownBy(() -> service.archive(id))
+                .isInstanceOf(InvalidStatusTransitionException.class);
+    }
+
+    private void assertArchiveSucceedsFrom(GoalStatus from) throws Exception {
+        StrategicGoal goal = persisted(from);
+        UUID id = goal.getId();
+        when(repository.findWithKpisById(id)).thenReturn(Optional.of(goal));
+        assertThat(service.archive(id).status()).isEqualTo(GoalStatus.ARCHIVED);
+    }
+
+    @Test
     void delete_nonDraftGoal_isRejected() throws Exception {
-        StrategicGoal goal = persisted(GoalStatus.SUBMITTED);
+        StrategicGoal goal = persisted(GoalStatus.ACTIVE);
         UUID id = goal.getId();
         when(repository.findWithKpisById(id)).thenReturn(Optional.of(goal));
         assertThatThrownBy(() -> service.delete(id))

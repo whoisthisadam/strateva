@@ -3,6 +3,7 @@ package com.strateva.goal.service;
 import com.strateva.audit.AuditAction;
 import com.strateva.audit.Auditable;
 import com.strateva.common.error.BusinessRuleViolationException;
+import com.strateva.common.error.InvalidStatusTransitionException;
 import com.strateva.common.error.NotFoundException;
 import com.strateva.goal.domain.GoalStatus;
 import com.strateva.goal.domain.Kpi;
@@ -51,9 +52,9 @@ public class GoalService {
     @Auditable(action = AuditAction.UPDATE, entityType = "StrategicGoal")
     public GoalResponse update(UUID id, GoalUpdateRequest request) {
         StrategicGoal goal = loadWithKpis(id);
-        if (goal.getStatus() != GoalStatus.DRAFT && goal.getStatus() != GoalStatus.SUBMITTED) {
+        if (goal.getStatus() != GoalStatus.DRAFT) {
             throw new BusinessRuleViolationException(
-                    "Редактирование возможно только в статусах «Черновик» и «На согласовании»");
+                    "Редактирование возможно только в статусе «Черновик»");
         }
         requireKpis(request.kpis());
         requireValidPeriod(request.periodStart(), request.periodEnd());
@@ -67,21 +68,24 @@ public class GoalService {
     }
 
     @Auditable(action = AuditAction.UPDATE, entityType = "StrategicGoal")
-    public GoalResponse submitDocumentation(UUID id) {
-        StrategicGoal goal = loadWithKpis(id);
-        if (goal.getStatus() != GoalStatus.DRAFT) {
-            throw new BusinessRuleViolationException(
-                    "Отправить на согласование можно только цель в статусе «Черновик»");
-        }
-        goal.setStatus(GoalStatus.SUBMITTED);
-        return GoalResponse.from(repository.save(goal));
+    public GoalResponse activate(UUID id) {
+        return transition(id, GoalStatus.ACTIVE);
     }
 
     @Auditable(action = AuditAction.UPDATE, entityType = "StrategicGoal")
-    public GoalResponse transition(UUID id, GoalStatus target) {
+    public GoalResponse complete(UUID id) {
+        return transition(id, GoalStatus.COMPLETED);
+    }
+
+    @Auditable(action = AuditAction.UPDATE, entityType = "StrategicGoal")
+    public GoalResponse archive(UUID id) {
+        return transition(id, GoalStatus.ARCHIVED);
+    }
+
+    private GoalResponse transition(UUID id, GoalStatus target) {
         StrategicGoal goal = loadWithKpis(id);
         if (!GoalTransitions.isAllowed(goal.getStatus(), target)) {
-            throw new BusinessRuleViolationException(
+            throw new InvalidStatusTransitionException(
                     "Недопустимый переход статуса цели");
         }
         goal.setStatus(target);

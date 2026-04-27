@@ -33,6 +33,12 @@ public class GlobalExceptionHandler {
                 ApiError.of(409, "Conflict", "CONFLICT", ex.getMessage(), req.getRequestURI()));
     }
 
+    @ExceptionHandler(InvalidStatusTransitionException.class)
+    public ResponseEntity<ApiError> handleInvalidTransition(InvalidStatusTransitionException ex, HttpServletRequest req) {
+        return ResponseEntity.badRequest().body(
+                ApiError.of(400, "Bad Request", "INVALID_STATUS_TRANSITION", ex.getMessage(), req.getRequestURI()));
+    }
+
     @ExceptionHandler(BusinessRuleViolationException.class)
     public ResponseEntity<ApiError> handleBusinessRule(BusinessRuleViolationException ex, HttpServletRequest req) {
         return ResponseEntity.badRequest().body(

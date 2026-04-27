@@ -42,12 +42,8 @@ class TaskControllerIT extends AbstractPostgresIT {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         String id = objectMapper.readTree(created).get("id").asText();
-        mockMvc.perform(post("/api/v1/goals/" + id + "/submit")
+        mockMvc.perform(post("/api/v1/goals/" + id + "/activate")
                 .header(HttpHeaders.AUTHORIZATION, bearer(pm))).andExpect(status().isOk());
-        mockMvc.perform(post("/api/v1/goals/" + id + "/status")
-                .header(HttpHeaders.AUTHORIZATION, bearer(pm))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"status\":\"ACTIVE\"}")).andExpect(status().isOk());
         return id;
     }
 
@@ -106,10 +102,8 @@ class TaskControllerIT extends AbstractPostgresIT {
     void taskOnArchivedGoal_returns400_BR5() throws Exception {
         String pm = loginAs("pm", "pmPass1!");
         String goalId = createActiveGoal(pm);
-        mockMvc.perform(post("/api/v1/goals/" + goalId + "/status")
-                .header(HttpHeaders.AUTHORIZATION, bearer(pm))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"status\":\"ARCHIVED\"}")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/goals/" + goalId + "/archive")
+                .header(HttpHeaders.AUTHORIZATION, bearer(pm))).andExpect(status().isOk());
 
         mockMvc.perform(post("/api/v1/tasks")
                         .header(HttpHeaders.AUTHORIZATION, bearer(pm))

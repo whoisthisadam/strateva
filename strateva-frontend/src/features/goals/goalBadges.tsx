@@ -6,7 +6,6 @@ type BadgeVariant = 'brand' | 'neutral' | 'success' | 'warning'
 
 const STATUS_VARIANT: Record<GoalStatus, BadgeVariant> = {
   DRAFT: 'neutral',
-  SUBMITTED: 'warning',
   ACTIVE: 'success',
   COMPLETED: 'brand',
   ARCHIVED: 'neutral',

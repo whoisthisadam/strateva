@@ -1,6 +1,5 @@
 export const GOAL_STATUSES = [
   'DRAFT',
-  'SUBMITTED',
   'ACTIVE',
   'COMPLETED',
   'ARCHIVED',

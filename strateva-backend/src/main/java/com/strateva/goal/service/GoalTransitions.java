@@ -6,14 +6,15 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Encodes the legal state-machine for strategic goals.
- * {@link GoalStatus#DRAFT} → {@link GoalStatus#SUBMITTED} is performed via
- * {@code submitDocumentation}; the remaining edges are driven via {@code transition}.
+ * Encodes the legal state-machine for strategic goals. All transitions are driven
+ * via the explicit {@code activate}, {@code complete} and {@code archive} methods
+ * on {@code GoalService}; this map is the single source of truth those methods
+ * consult before mutating state.
  */
 final class GoalTransitions {
 
     static final Map<GoalStatus, Set<GoalStatus>> ALLOWED = Map.of(
-            GoalStatus.SUBMITTED, Set.of(GoalStatus.ACTIVE),
+            GoalStatus.DRAFT, Set.of(GoalStatus.ACTIVE, GoalStatus.ARCHIVED),
             GoalStatus.ACTIVE, Set.of(GoalStatus.COMPLETED, GoalStatus.ARCHIVED),
             GoalStatus.COMPLETED, Set.of(GoalStatus.ARCHIVED)
     );

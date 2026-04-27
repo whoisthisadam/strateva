@@ -6,7 +6,6 @@ import com.strateva.goal.domain.Priority;
 import com.strateva.goal.service.GoalService;
 import com.strateva.goal.web.dto.GoalCreateRequest;
 import com.strateva.goal.web.dto.GoalResponse;
-import com.strateva.goal.web.dto.GoalStatusUpdateRequest;
 import com.strateva.goal.web.dto.GoalSummary;
 import com.strateva.goal.web.dto.GoalUpdateRequest;
 import jakarta.validation.Valid;
@@ -56,17 +55,22 @@ public class GoalController {
         return ResponseEntity.ok(service.update(id, request));
     }
 
-    @PostMapping("/{id}/submit")
+    @PostMapping("/{id}/activate")
     @PreAuthorize("hasRole('PROJECT_MANAGER')")
-    public ResponseEntity<GoalResponse> submit(@PathVariable UUID id) {
-        return ResponseEntity.ok(service.submitDocumentation(id));
+    public ResponseEntity<GoalResponse> activate(@PathVariable UUID id) {
+        return ResponseEntity.ok(service.activate(id));
     }
 
-    @PostMapping("/{id}/status")
+    @PostMapping("/{id}/complete")
     @PreAuthorize("hasRole('PROJECT_MANAGER')")
-    public ResponseEntity<GoalResponse> changeStatus(@PathVariable UUID id,
-                                                     @Valid @RequestBody GoalStatusUpdateRequest request) {
-        return ResponseEntity.ok(service.transition(id, request.status()));
+    public ResponseEntity<GoalResponse> complete(@PathVariable UUID id) {
+        return ResponseEntity.ok(service.complete(id));
+    }
+
+    @PostMapping("/{id}/archive")
+    @PreAuthorize("hasRole('PROJECT_MANAGER')")
+    public ResponseEntity<GoalResponse> archive(@PathVariable UUID id) {
+        return ResponseEntity.ok(service.archive(id));
     }
 
     @DeleteMapping("/{id}")

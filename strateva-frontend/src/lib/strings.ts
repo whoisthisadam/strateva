@@ -168,7 +168,6 @@ export const strings = {
     },
     actions: {
       edit: 'Редактировать',
-      submitForApproval: 'Отправить на согласование',
       activate: 'Активировать',
       complete: 'Завершить',
       archive: 'Перевести в архив',
@@ -177,7 +176,6 @@ export const strings = {
     },
     status: {
       DRAFT: 'Черновик',
-      SUBMITTED: 'На согласовании',
       ACTIVE: 'Активна',
       COMPLETED: 'Завершена',
       ARCHIVED: 'В архиве',
@@ -191,7 +189,6 @@ export const strings = {
     toast: {
       created: 'Цель создана',
       updated: 'Цель обновлена',
-      submitted: 'Цель отправлена на согласование',
       activated: 'Цель переведена в статус «Активна»',
       completed: 'Цель завершена',
       archived: 'Цель перенесена в архив',

@@ -36,11 +36,7 @@ async function ensureActiveGoal(ctx: APIRequestContext, pmToken: string): Promis
   })
   expect(created.ok(), 'create goal for tasks').toBeTruthy()
   const goalId = (await created.json()).id as string
-  await ctx.post(`/api/v1/goals/${goalId}/submit`, { headers: auth })
-  await ctx.post(`/api/v1/goals/${goalId}/status`, {
-    headers: { ...auth, 'Content-Type': 'application/json' },
-    data: { status: 'ACTIVE' },
-  })
+  await ctx.post(`/api/v1/goals/${goalId}/activate`, { headers: auth })
   return goalId
 }
 

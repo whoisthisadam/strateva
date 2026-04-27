@@ -38,12 +38,8 @@ class ReportControllerIT extends AbstractPostgresIT {
                         .contentType(MediaType.APPLICATION_JSON).content(GOAL))
                 .andExpect(status().isCreated()).andReturn();
         String id = objectMapper.readTree(created.getResponse().getContentAsString()).get("id").asText();
-        mockMvc.perform(post("/api/v1/goals/" + id + "/submit")
+        mockMvc.perform(post("/api/v1/goals/" + id + "/activate")
                 .header(HttpHeaders.AUTHORIZATION, bearer(pm))).andExpect(status().isOk());
-        mockMvc.perform(post("/api/v1/goals/" + id + "/status")
-                .header(HttpHeaders.AUTHORIZATION, bearer(pm))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"status\":\"ACTIVE\"}")).andExpect(status().isOk());
         return id;
     }
 

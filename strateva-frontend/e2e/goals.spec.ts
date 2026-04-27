@@ -39,12 +39,7 @@ async function ensureActiveGoal(ctx: APIRequestContext, pmToken: string): Promis
   })
   expect(created.ok(), 'create goal').toBeTruthy()
   const goal = await created.json()
-  const submit = await ctx.post(`/api/v1/goals/${goal.id}/submit`, { headers: auth })
-  expect(submit.ok(), 'submit goal').toBeTruthy()
-  const activate = await ctx.post(`/api/v1/goals/${goal.id}/status`, {
-    headers: { ...auth, 'Content-Type': 'application/json' },
-    data: { status: 'ACTIVE' },
-  })
+  const activate = await ctx.post(`/api/v1/goals/${goal.id}/activate`, { headers: auth })
   expect(activate.ok(), 'activate goal').toBeTruthy()
   return goal.id as string
 }

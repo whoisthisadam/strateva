@@ -2,19 +2,19 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
 import {
-  changeGoalStatus,
+  activateGoal,
+  archiveGoal,
+  completeGoal,
   createGoal,
   deleteGoal,
   fetchGoal,
   listGoals,
-  submitGoal,
   updateGoal,
 } from '@/features/goals/goalsApi'
 import { strings } from '@/lib/strings'
 import type {
   GoalFormValues,
   GoalListFilters,
-  GoalStatus,
 } from '@/types/goals'
 
 const GOALS_KEY = ['goals'] as const
@@ -73,33 +73,36 @@ export function useUpdateGoal(id: string) {
   })
 }
 
-export function useSubmitGoal() {
+export function useActivateGoal() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => submitGoal(id),
+    mutationFn: (id: string) => activateGoal(id),
     onSuccess: () => {
-      toast.success(strings.goals.toast.submitted)
+      toast.success(strings.goals.toast.activated)
       invalidateGoals(qc)
     },
     onError: handleError,
   })
 }
 
-export function useChangeGoalStatus() {
+export function useCompleteGoal() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: GoalStatus }) =>
-      changeGoalStatus(id, status),
-    onSuccess: (_data, { status }) => {
-      const toastMap: Record<GoalStatus, string | null> = {
-        DRAFT: null,
-        SUBMITTED: strings.goals.toast.submitted,
-        ACTIVE: strings.goals.toast.activated,
-        COMPLETED: strings.goals.toast.completed,
-        ARCHIVED: strings.goals.toast.archived,
-      }
-      const msg = toastMap[status]
-      if (msg) toast.success(msg)
+    mutationFn: (id: string) => completeGoal(id),
+    onSuccess: () => {
+      toast.success(strings.goals.toast.completed)
+      invalidateGoals(qc)
+    },
+    onError: handleError,
+  })
+}
+
+export function useArchiveGoal() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => archiveGoal(id),
+    onSuccess: () => {
+      toast.success(strings.goals.toast.archived)
       invalidateGoals(qc)
     },
     onError: handleError,

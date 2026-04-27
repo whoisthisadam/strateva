@@ -112,7 +112,7 @@ class GoalControllerIT extends AbstractPostgresIT {
     }
 
     @Test
-    void goalLifecycle_draftSubmitActivateArchive() throws Exception {
+    void goalLifecycle_draftActivateCompleteArchive() throws Exception {
         String pm = loginAs("pm", "pmPass1!");
         String created = mockMvc.perform(post("/api/v1/goals")
                         .header(HttpHeaders.AUTHORIZATION, bearer(pm))
@@ -122,24 +122,42 @@ class GoalControllerIT extends AbstractPostgresIT {
                 .andReturn().getResponse().getContentAsString();
         String id = objectMapper.readTree(created).get("id").asText();
 
-        mockMvc.perform(post("/api/v1/goals/" + id + "/submit")
+        mockMvc.perform(post("/api/v1/goals/" + id + "/activate")
                         .header(HttpHeaders.AUTHORIZATION, bearer(pm)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("SUBMITTED"));
-
-        mockMvc.perform(post("/api/v1/goals/" + id + "/status")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(pm))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"status\":\"ACTIVE\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
 
-        mockMvc.perform(post("/api/v1/goals/" + id + "/status")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(pm))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"status\":\"ARCHIVED\"}"))
+        mockMvc.perform(post("/api/v1/goals/" + id + "/complete")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(pm)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("COMPLETED"));
+
+        mockMvc.perform(post("/api/v1/goals/" + id + "/archive")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(pm)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ARCHIVED"));
+    }
+
+    @Test
+    void illegalTransition_completedToActive_returns400_withCode() throws Exception {
+        String pm = loginAs("pm", "pmPass1!");
+        String created = mockMvc.perform(post("/api/v1/goals")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(pm))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_GOAL))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String id = objectMapper.readTree(created).get("id").asText();
+        mockMvc.perform(post("/api/v1/goals/" + id + "/activate")
+                .header(HttpHeaders.AUTHORIZATION, bearer(pm))).andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/goals/" + id + "/complete")
+                .header(HttpHeaders.AUTHORIZATION, bearer(pm))).andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/goals/" + id + "/activate")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(pm)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_STATUS_TRANSITION"))
+                .andExpect(jsonPath("$.message").value("Недопустимый переход статуса цели"));
     }
 
     @Test
@@ -183,12 +201,8 @@ class GoalControllerIT extends AbstractPostgresIT {
     }
 
     private void activate(String pm, String goalId) throws Exception {
-        mockMvc.perform(post("/api/v1/goals/" + goalId + "/submit")
+        mockMvc.perform(post("/api/v1/goals/" + goalId + "/activate")
                 .header(HttpHeaders.AUTHORIZATION, bearer(pm))).andExpect(status().isOk());
-        mockMvc.perform(post("/api/v1/goals/" + goalId + "/status")
-                .header(HttpHeaders.AUTHORIZATION, bearer(pm))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"status\":\"ACTIVE\"}")).andExpect(status().isOk());
     }
 
     private void assignTaskTo(String pm, String goalId, String assignee) throws Exception {
@@ -238,12 +252,8 @@ class GoalControllerIT extends AbstractPostgresIT {
                         .content(VALID_GOAL))
                 .andReturn().getResponse().getContentAsString();
         String id = objectMapper.readTree(created).get("id").asText();
-        mockMvc.perform(post("/api/v1/goals/" + id + "/submit")
+        mockMvc.perform(post("/api/v1/goals/" + id + "/activate")
                 .header(HttpHeaders.AUTHORIZATION, bearer(pm)));
-        mockMvc.perform(post("/api/v1/goals/" + id + "/status")
-                .header(HttpHeaders.AUTHORIZATION, bearer(pm))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"status\":\"ACTIVE\"}"));
 
         mockMvc.perform(patch("/api/v1/goals/" + id)
                         .header(HttpHeaders.AUTHORIZATION, bearer(pm))
